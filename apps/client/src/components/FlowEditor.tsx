@@ -32,14 +32,14 @@ function hydrateFlow(project: ProjectFull): { nodes: Node[]; edges: Edge[] } {
   nodes.push({
     id: 'start',
     type: 'start',
-    position: { x: 0, y: 200 },
+    position: { x: 400, y: 0 },
     data: {
       summary: `${project.resolution} @ ${project.fps}fps / ${project.defaultTransitionType}`,
     },
   });
 
-  const startX = 200;
-  const spacingX = 280;
+  const startY = 120;
+  const spacingY = 200;
 
   for (let i = 0; i < project.shots.length; i++) {
     const shot = project.shots[i];
@@ -47,7 +47,7 @@ function hydrateFlow(project: ProjectFull): { nodes: Node[]; edges: Edge[] } {
     nodes.push({
       id: shot.id,
       type: 'shot',
-      position: { x: startX + (i + 1) * spacingX, y: 200 },
+      position: { x: 400, y: startY + (i + 1) * spacingY },
       data: {
         order: shot.order,
         promptPreview: shot.prompt.slice(0, 60) || '空提示词',
@@ -61,7 +61,7 @@ function hydrateFlow(project: ProjectFull): { nodes: Node[]; edges: Edge[] } {
   nodes.push({
     id: 'merge',
     type: 'merge',
-    position: { x: startX + (project.shots.length + 1) * spacingX, y: 200 },
+    position: { x: 400, y: startY + (project.shots.length + 1) * spacingY },
     data: {
       bgmName: project.bgmPath ? project.bgmPath.split('/').pop() : undefined,
       readyToMerge: project.status === 'ready_to_merge',
@@ -80,10 +80,14 @@ function hydrateFlow(project: ProjectFull): { nodes: Node[]; edges: Edge[] } {
       id: edge.id,
       source: sourceId,
       target: targetId,
-      type: 'smoothstep',
+      type: 'straight',
       animated: false,
       markerEnd: { type: MarkerType.ArrowClosed },
       label: transLabel,
+      labelStyle: { fill: '#94a3b8', fontSize: 11, fontWeight: 500 },
+      labelBgStyle: { fill: '#131330', fillOpacity: 0.95 },
+      labelBgPadding: [4, 8],
+      labelBgBorderRadius: 4,
       style: { stroke: '#475569' },
       data: { edgeData: edge },
     });
@@ -153,13 +157,7 @@ export default function FlowEditor() {
         snapToGrid
         snapGrid={[20, 20]}
       >
-        <Controls
-          style={{
-            borderRadius: 10,
-            border: '1px solid #1e1e4a',
-            background: '#131330',
-          }}
-        />
+        <Controls position="bottom-right" className="flow-controls" />
         <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#1e1e4a" />
       </ReactFlow>
     </div>

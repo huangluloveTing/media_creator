@@ -5,6 +5,7 @@ import { ProjectModule } from './modules/project/project.module';
 import { ShotModule } from './modules/shot/shot.module';
 import { SeedanceModule } from './modules/seedance/seedance.module';
 import { FFmpegModule } from './modules/ffmpeg/ffmpeg.module';
+import { SettingsModule } from './modules/settings/settings.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { FFmpegModule } from './modules/ffmpeg/ffmpeg.module';
     ShotModule,
     SeedanceModule,
     FFmpegModule,
+    SettingsModule,
   ],
 })
 export class AppModule {}

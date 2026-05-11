@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import {
   Card,
   Button,
@@ -17,6 +17,7 @@ import {
   DeleteOutlined,
   PlaySquareOutlined,
   LoadingOutlined,
+  SettingOutlined,
 } from '@ant-design/icons';
 import { api } from '../api/client';
 import type { Project } from '../types';
@@ -95,6 +96,13 @@ export default function ProjectListPage() {
             </Title>
             <Text style={{ color: '#64748b', fontSize: 13 }}>AI 视频生成工作台</Text>
           </div>
+          <Link to="/settings">
+            <Button
+              type="text"
+              icon={<SettingOutlined style={{ fontSize: 18 }} />}
+              style={{ color: '#94a3b8', marginLeft: 'auto' }}
+            />
+          </Link>
         </Space>
 
         {/* Create */}

@@ -38,7 +38,7 @@ function ShotNode({ data, selected }: NodeProps) {
         ...base,
       }}
     >
-      <Handle type="target" position={Position.Left} style={{ background: '#475569', width: 10, height: 10 }} />
+      <Handle type="target" position={Position.Top} style={{ background: '#475569', width: 10, height: 10 }} />
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
         <span style={{ fontSize: 11, fontWeight: 600, color: '#64748b' }}>#{data.order}</span>
         {statusIcons[status]}
@@ -74,7 +74,7 @@ function ShotNode({ data, selected }: NodeProps) {
           {data.errorPreview}
         </div>
       )}
-      <Handle type="source" position={Position.Right} style={{ background: '#475569', width: 10, height: 10 }} />
+      <Handle type="source" position={Position.Bottom} style={{ background: '#475569', width: 10, height: 10 }} />
     </div>
   );
 }

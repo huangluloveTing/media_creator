@@ -3,6 +3,7 @@ import { ConfigProvider, theme, App as AntApp } from 'antd';
 import { ProjectProvider } from './context/ProjectContext';
 import ProjectListPage from './pages/ProjectListPage';
 import ProjectEditorPage from './pages/ProjectEditorPage';
+import SettingsPage from './pages/SettingsPage';
 
 const customTheme = {
   algorithm: theme.darkAlgorithm,
@@ -57,6 +58,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<ProjectListPage />} />
             <Route path="/project/:projectId" element={<ProjectProvider><ProjectEditorPage /></ProjectProvider>} />
+            <Route path="/settings" element={<SettingsPage />} />
           </Routes>
         </BrowserRouter>
       </AntApp>

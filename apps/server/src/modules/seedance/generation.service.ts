@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Shot } from '../shot/entities/shot.entity';
@@ -20,6 +21,7 @@ export class GenerationService {
     private readonly taskRepo: Repository<GenerationTask>,
     private readonly seedanceService: SeedanceService,
     private readonly projectService: ProjectService,
+    private readonly config: ConfigService,
   ) {}
 
   async generateShot(shotId: string): Promise<GenerationTask> {
@@ -126,7 +128,7 @@ export class GenerationService {
           // Download video
           const shot = await this.shotRepo.findOne({ where: { id: shotId } });
           if (shot) {
-            const outputDir = process.env.OUTPUT_DIR ?? './output';
+            const outputDir = this.config.get<string>('OUTPUT_DIR', './output');
             const shotPath = path.join(outputDir, projectId, 'shots', `${shot.order}.mp4`);
             try {
               await this.seedanceService.downloadAndSave(result.videoUrl, shotPath);

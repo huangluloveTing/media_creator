@@ -1,4 +1,4 @@
-import { type Project, type ProjectFull, type Shot, type EdgeData, type GenerationTask } from '../types';
+import { type Project, type ProjectFull, type Setting, type Shot, type EdgeData, type GenerationTask } from '../types';
 
 const BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3001/api';
 
@@ -57,4 +57,10 @@ export const api = {
     request<{ ok: boolean; outputPath: string }>(`/projects/${projectId}/merge`, {
       method: 'POST',
     }),
+
+  // Settings
+  getSettings: () => request<Setting[]>('/settings'),
+  getSettingsByProvider: (provider: string) => request<Setting[]>(`/settings/${provider}`),
+  updateSettings: (items: { key: string; value: string }[]) =>
+    request<Setting[]>('/settings', { method: 'PUT', body: JSON.stringify({ items }) }),
 };

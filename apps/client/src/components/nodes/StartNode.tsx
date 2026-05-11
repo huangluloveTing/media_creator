@@ -26,7 +26,7 @@ function StartNode({ data, selected }: NodeProps) {
           {data.summary}
         </div>
       )}
-      <Handle type="source" position={Position.Right} style={{ background: '#34d399', width: 10, height: 10 }} />
+      <Handle type="source" position={Position.Bottom} style={{ background: '#34d399', width: 10, height: 10 }} />
     </div>
   );
 }

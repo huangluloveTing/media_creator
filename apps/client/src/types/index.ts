@@ -2,6 +2,7 @@ export type {
   Project,
   ProjectFull,
   ProjectStatus,
+  Setting,
   Shot,
   ShotSize,
   ShotAngle,

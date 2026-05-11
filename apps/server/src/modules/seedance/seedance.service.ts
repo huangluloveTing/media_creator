@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import axios, { AxiosInstance } from 'axios';
+import { SettingsService } from '../settings/settings.service';
+import axios from 'axios';
 
 export interface SeedanceSubmitParams {
   prompt: string;
@@ -21,31 +22,35 @@ export interface SeedanceTaskResult {
 
 @Injectable()
 export class SeedanceService {
-  private readonly client: AxiosInstance;
   private readonly logger = new Logger(SeedanceService.name);
+  private baseURL: string;
 
-  constructor(private readonly config: ConfigService) {
-    const apiKey = this.config.get<string>('SEEDANCE_API_KEY');
-    const baseURL = this.config.get<string>(
-      'SEEDANCE_API_URL',
-      'https://ark.cn-beijing.volces.com',
-    );
+  constructor(
+    private readonly config: ConfigService,
+    private readonly settings: SettingsService,
+  ) {
+    this.baseURL = config.get<string>('SEEDANCE_API_URL', 'https://ark.cn-beijing.volces.com');
+  }
 
-    this.client = axios.create({
-      baseURL,
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      timeout: 30_000,
-    });
+  private async resolveApiKey(): Promise<string> {
+    const dbKey = await this.settings.getRaw('seedance.apiKey');
+    if (dbKey) return dbKey;
+    return this.config.get<string>('SEEDANCE_API_KEY', '');
+  }
+
+  private async resolveBaseUrl(): Promise<string> {
+    const dbUrl = await this.settings.getRaw('seedance.apiUrl');
+    if (dbUrl) return dbUrl;
+    return this.baseURL;
   }
 
   async submit(params: SeedanceSubmitParams): Promise<{ taskId: string }> {
-    const apiKey = this.config.get<string>('SEEDANCE_API_KEY');
+    const apiKey = await this.resolveApiKey();
     if (!apiKey) {
-      throw new Error('Seedance API key not configured');
+      throw new Error('Seedance API key not configured — 请在设置页面配置 Seedance API Key');
     }
+
+    const baseURL = await this.resolveBaseUrl();
 
     const payload = {
       model: params.model ?? 'seedance-2.0',
@@ -69,7 +74,13 @@ export class SeedanceService {
     this.logger.log(`Submitting Seedance task: ${params.prompt.slice(0, 80)}...`);
 
     try {
-      const res = await this.client.post('/api/v3/contents/generations/tasks', payload);
+      const res = await axios.post(`${baseURL}/api/v3/contents/generations/tasks`, payload, {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        timeout: 30_000,
+      });
       const taskId = res.data?.id;
       if (!taskId) throw new Error('No task ID in Seedance response');
       return { taskId };
@@ -82,7 +93,12 @@ export class SeedanceService {
 
   async poll(taskId: string): Promise<SeedanceTaskResult> {
     try {
-      const res = await this.client.get(`/api/v3/contents/generations/tasks/${taskId}`);
+      const apiKey = await this.resolveApiKey();
+      const baseURL = await this.resolveBaseUrl();
+      const res = await axios.get(`${baseURL}/api/v3/contents/generations/tasks/${taskId}`, {
+        headers: { Authorization: `Bearer ${apiKey}` },
+        timeout: 30_000,
+      });
       const data = res.data;
 
       return {

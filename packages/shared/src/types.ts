@@ -63,3 +63,11 @@ export interface ProjectFull extends Project {
   shots: Shot[];
   edges: EdgeData[];
 }
+
+export interface Setting {
+  id: string;
+  key: string;
+  value: string;
+  provider: string;
+  updatedAt: string;
+}
