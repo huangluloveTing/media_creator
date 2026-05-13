@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Input, Select, InputNumber, Button, Typography, Tag, message } from 'antd';
+import { Input, Select, InputNumber, Button, Typography, Tag, message, Progress } from 'antd';
 import { CameraOutlined, ThunderboltOutlined, ReloadOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { useProject } from '../../context/ProjectContext';
-import { api } from '../../api/client';
+import { api, getShotVideoUrl } from '../../api/client';
 
 const { Text, Title } = Typography;
 
@@ -29,9 +29,16 @@ const movementOptions = [
   { value: 'handheld', label: '手持' },
 ];
 const modelOptions = [
-  { value: 'seedance-2.0', label: 'seedance-2.0' },
-  { value: 'seedance-2.0-fast', label: 'seedance-2.0-fast' },
-  { value: 'seedance-1.5-pro', label: 'seedance-1.5-pro' },
+  { value: 'doubao-seedance-2-0-fast-260128', label: 'doubao-seedance-2-0-fast-260128' },
+  { value: 'doubao-seedance-2-0-260128', label: 'doubao-seedance-2-0-260128' },
+];
+
+const transitionOptions = [
+  { value: 'cut', label: '硬切' },
+  { value: 'dissolve', label: '叠化' },
+  { value: 'fade', label: '淡入淡出' },
+  { value: 'wipe', label: '擦除' },
+  { value: 'none', label: '无' },
 ];
 
 const statusConfig: Record<string, { label: string; color: string }> = {
@@ -68,12 +75,51 @@ export default function ShotProperties({ shotId }: { shotId: string }) {
     });
   };
 
+  const outgoingEdge = state.project?.edges.find((e) => e.sourceShotId === shotId);
+
+  const updateEdge = async (field: string, value: unknown) => {
+    if (!outgoingEdge) return;
+    const updated = await api.updateEdge(outgoingEdge.id, { [field]: value });
+    dispatch({
+      type: 'UPDATE_PROJECT',
+      payload: {
+        edges: state.project!.edges.map((e) =>
+          e.id === outgoingEdge.id ? { ...e, ...updated } : e,
+        ),
+      },
+    });
+  };
+
   const handleGenerate = async () => {
-    try { await api.generateShot(shotId); } catch (err: any) { message.error(`生成失败: ${err.message}`); }
+    try {
+      const task = await api.generateShot(shotId);
+      dispatch({
+        type: 'UPDATE_PROJECT',
+        payload: {
+          shots: state.project!.shots.map((s) =>
+            s.id === shotId ? { ...s, generation: task } : s,
+          ),
+        },
+      });
+    } catch (err: any) {
+      message.error(`生成失败: ${err.message}`);
+    }
   };
 
   const handleRetry = async () => {
-    try { await api.generateShot(shotId); } catch (err: any) { message.error(`重试失败: ${err.message}`); }
+    try {
+      const task = await api.generateShot(shotId);
+      dispatch({
+        type: 'UPDATE_PROJECT',
+        payload: {
+          shots: state.project!.shots.map((s) =>
+            s.id === shotId ? { ...s, generation: task } : s,
+          ),
+        },
+      });
+    } catch (err: any) {
+      message.error(`重试失败: ${err.message}`);
+    }
   };
 
   const genStatus = shot.generation?.status;
@@ -143,17 +189,103 @@ export default function ShotProperties({ shotId }: { shotId: string }) {
         </Label>
       </fieldset>
 
-      {/* Actions */}
-      {genStatus === 'failed' ? (
-        <Button type="primary" danger block icon={<ReloadOutlined />} onClick={handleRetry}>
-          重新生成
-        </Button>
-      ) : genStatus === 'completed' ? (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#34d399', fontSize: 13 }}>
-          <CheckCircleOutlined /> 生成完成
+      {/* Transition out */}
+      <fieldset style={{ border: '1px solid #1e1e4a', borderRadius: 10, padding: '12px 16px', margin: 0 }}>
+        <legend style={{ color: '#64748b', fontSize: 11, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', padding: '0 4px' }}>
+          转场到下一镜
+        </legend>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <Label text="转场类型">
+            <Select
+              value={outgoingEdge?.transitionType}
+              onChange={(v) => updateEdge('transitionType', v)}
+              style={formStyle}
+              options={transitionOptions}
+              disabled={!outgoingEdge}
+            />
+          </Label>
+          {outgoingEdge &&
+            outgoingEdge.transitionType !== 'cut' &&
+            outgoingEdge.transitionType !== 'none' && (
+              <Label text="时长 (秒)">
+                <InputNumber
+                  value={outgoingEdge.transitionDuration}
+                  min={0}
+                  max={5}
+                  step={0.1}
+                  onChange={(v) => updateEdge('transitionDuration', v ?? 0)}
+                  style={formStyle}
+                />
+              </Label>
+            )}
         </div>
-      ) : genStatus === 'generating' ? (
-        <Text style={{ color: '#4f7cff', fontSize: 13 }}>生成中... {shot.generation?.progress ?? 0}%</Text>
+      </fieldset>
+
+      {/* Actions / Status / Preview */}
+      {genStatus === 'completed' ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#34d399', fontSize: 13 }}>
+            <CheckCircleOutlined /> 生成完成
+          </div>
+          <video
+            key={shot.generation?.id}
+            controls
+            src={getShotVideoUrl(shotId)}
+            style={{
+              width: '100%',
+              borderRadius: 8,
+              background: '#000',
+              border: '1px solid #1e1e4a',
+            }}
+          />
+          <Button
+            block
+            icon={<ReloadOutlined />}
+            onClick={handleRetry}
+            style={{
+              background: '#1a1a40',
+              border: '1px solid #2a2a5a',
+              color: '#94a3b8',
+              borderRadius: 8,
+            }}
+          >
+            重新生成
+          </Button>
+        </div>
+      ) : genStatus === 'failed' ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {shot.generation?.errorMessage && (
+            <div
+              style={{
+                background: 'rgba(248, 113, 113, 0.1)',
+                border: '1px solid #7f1d1d',
+                borderRadius: 8,
+                padding: '10px 12px',
+                fontSize: 12,
+                color: '#f87171',
+                lineHeight: 1.5,
+                wordBreak: 'break-word',
+              }}
+            >
+              {shot.generation.errorMessage}
+            </div>
+          )}
+          <Button type="primary" danger block icon={<ReloadOutlined />} onClick={handleRetry}>
+            重新生成
+          </Button>
+        </div>
+      ) : genStatus === 'queued' || genStatus === 'generating' ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <Text style={{ color: '#4f7cff', fontSize: 13 }}>
+            {genStatus === 'queued' ? '排队中...' : `生成中... ${shot.generation?.progress ?? 0}%`}
+          </Text>
+          <Progress
+            percent={shot.generation?.progress ?? 0}
+            showInfo={false}
+            strokeColor={{ '0%': '#4f7cff', '100%': '#6366f1' }}
+            trailColor="#1e1e4a"
+          />
+        </div>
       ) : (
         <Button
           type="primary"

@@ -2,11 +2,22 @@ import { type Project, type ProjectFull, type Setting, type Shot, type EdgeData,
 
 const BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3001/api';
 
+export function getShotVideoUrl(shotId: string): string {
+  return `${BASE}/shots/${shotId}/video`;
+}
+
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${url}`, {
-    headers: { 'Content-Type': 'application/json' },
+    cache: 'no-store',
     ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-cache',
+      Pragma: 'no-cache',
+      ...(options?.headers ?? {}),
+    },
   });
+  if (res.status === 304) return undefined as T;
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.message ?? body.error ?? res.statusText);
@@ -47,8 +58,8 @@ export const api = {
     request<EdgeData>(`/edges/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
 
   // Project-level actions
-  generateAll: (projectId: string, concurrency?: number) =>
-    request<{ ok: boolean }>(`/projects/${projectId}/generate-all?concurrency=${concurrency ?? 3}`, {
+  generateAll: (projectId: string) =>
+    request<{ ok: boolean }>(`/projects/${projectId}/generate-all`, {
       method: 'POST',
     }),
   getShotsWithStatus: (projectId: string) =>

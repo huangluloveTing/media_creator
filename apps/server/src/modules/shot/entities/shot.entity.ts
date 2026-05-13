@@ -54,7 +54,7 @@ export class Shot {
   @Column({ nullable: true, length: 500, name: 'scene_ref' })
   sceneRef: string;
 
-  @Column({ length: 50, default: 'seedance-2.0' })
+  @Column({ length: 50, default: 'doubao-seedance-2-0-fast-260128' })
   model: ShotModel;
 
   @Column({ length: 10, default: '16:9', name: 'aspect_ratio' })

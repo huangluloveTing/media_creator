@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { BullModule } from '@nestjs/bullmq';
 import { ProjectModule } from './modules/project/project.module';
 import { ShotModule } from './modules/shot/shot.module';
 import { SeedanceModule } from './modules/seedance/seedance.module';
@@ -22,6 +23,16 @@ import { SettingsModule } from './modules/settings/settings.module';
         database: config.get<string>('DB_DATABASE', 'media_creator'),
         autoLoadEntities: true,
         synchronize: true, // dev only; use migrations in production
+      }),
+    }),
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        connection: {
+          host: config.get<string>('REDIS_HOST', 'localhost'),
+          port: config.get<number>('REDIS_PORT', 6379),
+        },
       }),
     }),
     ProjectModule,

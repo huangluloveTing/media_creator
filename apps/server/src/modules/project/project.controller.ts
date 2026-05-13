@@ -8,7 +8,6 @@ import {
   Param,
   HttpCode,
   HttpStatus,
-  Query,
   BadRequestException,
 } from '@nestjs/common';
 import { ProjectService } from './project.service';
@@ -51,8 +50,8 @@ export class ProjectController {
   }
 
   @Post(':id/generate-all')
-  async generateAll(@Param('id') id: string, @Query('concurrency') concurrency?: string) {
-    await this.generationService.generateAllShots(id, concurrency ? parseInt(concurrency) : 3);
+  async generateAll(@Param('id') id: string) {
+    await this.generationService.generateAllShots(id);
     return { ok: true };
   }
 

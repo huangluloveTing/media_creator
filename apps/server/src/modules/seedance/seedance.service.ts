@@ -39,8 +39,8 @@ export class SeedanceService {
   }
 
   private async resolveBaseUrl(): Promise<string> {
-    const dbUrl = await this.settings.getRaw('seedance.apiUrl');
-    if (dbUrl) return dbUrl;
+    // const dbUrl = await this.settings.getRaw('seedance.apiUrl');
+    // if (dbUrl) return dbUrl;
     return this.baseURL;
   }
 
@@ -53,7 +53,7 @@ export class SeedanceService {
     const baseURL = await this.resolveBaseUrl();
 
     const payload = {
-      model: params.model ?? 'seedance-2.0',
+      model: params.model ?? 'doubao-seedance-2-0-fast-260128',
       content: [
         {
           type: 'text',

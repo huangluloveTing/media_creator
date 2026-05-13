@@ -51,7 +51,7 @@ export class ShotService {
         duration: dto.duration ?? 5,
         requiredElements: dto.requiredElements ?? [],
         forbiddenElements: dto.forbiddenElements ?? [],
-        model: (dto.model as Shot['model']) ?? 'seedance-2.0',
+        model: (dto.model as Shot['model']) ?? 'doubao-seedance-2-0-fast-260128',
         aspectRatio: dto.aspectRatio ?? '16:9',
         resolution: dto.resolution ?? '1080p',
       });
