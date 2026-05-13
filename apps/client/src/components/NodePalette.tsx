@@ -199,7 +199,14 @@ function StatRow({
     >
       <span style={{ color, fontSize: 13, lineHeight: 1, width: 14 }}>{icon}</span>
       <Text style={{ color: '#94a3b8', fontSize: 12, flex: 1 }}>{label}</Text>
-      <Text style={{ color: '#e2e8f0', fontSize: 13, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
+      <Text
+        style={{
+          color: '#e2e8f0',
+          fontSize: 13,
+          fontWeight: 600,
+          fontVariantNumeric: 'tabular-nums',
+        }}
+      >
         {count}
       </Text>
     </div>

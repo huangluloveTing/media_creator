@@ -19,10 +19,7 @@ describe('ProjectService', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        ProjectService,
-        { provide: getRepositoryToken(Project), useValue: mockRepo },
-      ],
+      providers: [ProjectService, { provide: getRepositoryToken(Project), useValue: mockRepo }],
     }).compile();
 
     service = module.get(ProjectService);
@@ -31,7 +28,13 @@ describe('ProjectService', () => {
 
   it('creates a project with default settings', async () => {
     const dto = { title: 'Test Project' };
-    const created = { id: '1', title: 'Test Project', resolution: '1920x1080', fps: 24, status: 'draft' };
+    const created = {
+      id: '1',
+      title: 'Test Project',
+      resolution: '1920x1080',
+      fps: 24,
+      status: 'draft',
+    };
     mockRepo.create.mockReturnValue(created);
     mockRepo.save.mockResolvedValue(created);
 

@@ -40,20 +40,36 @@ export class FFmpegService {
     }
 
     const [width, height] = resolution.split('x').map(Number);
-    const args = this.buildFilterComplex(shots, edges, resolution, bgmPath, bgmVolume, originalVolume);
+    const args = this.buildFilterComplex(
+      shots,
+      edges,
+      resolution,
+      bgmPath,
+      bgmVolume,
+      originalVolume,
+    );
 
     const cmdArgs = [
       ...this.buildInputArgs(shots, bgmPath),
       ...args,
-      '-c:v', 'libx264',
-      '-preset', 'medium',
-      '-crf', '18',
-      '-c:a', 'aac',
-      '-b:a', '192k',
-      '-r', String(fps),
-      '-s', resolution,
-      '-map', '[vout]',
-      '-map', '[aout]',
+      '-c:v',
+      'libx264',
+      '-preset',
+      'medium',
+      '-crf',
+      '18',
+      '-c:a',
+      'aac',
+      '-b:a',
+      '192k',
+      '-r',
+      String(fps),
+      '-s',
+      resolution,
+      '-map',
+      '[vout]',
+      '-map',
+      '[aout]',
       '-y',
       outputPath,
     ];
@@ -89,10 +105,14 @@ export class FFmpegService {
 
     return new Promise((resolve, reject) => {
       const proc = spawn('ffmpeg', [
-        '-sseof', '-1',
-        '-i', videoPath,
-        '-vframes', '1',
-        '-q:v', '2',
+        '-sseof',
+        '-1',
+        '-i',
+        videoPath,
+        '-vframes',
+        '1',
+        '-q:v',
+        '2',
         '-y',
         outputPath,
       ]);
@@ -107,7 +127,9 @@ export class FFmpegService {
     const issues: string[] = [];
     for (const shot of shots) {
       if (!shot.generationTask || shot.generationTask.status !== 'completed') {
-        issues.push(`Shot order ${shot.order}: not completed (status: ${shot.generationTask?.status ?? 'none'})`);
+        issues.push(
+          `Shot order ${shot.order}: not completed (status: ${shot.generationTask?.status ?? 'none'})`,
+        );
       }
     }
     return issues;
@@ -164,7 +186,7 @@ export class FFmpegService {
       // xfade offset: time in the first input at which the transition starts.
       // Each transition shifts the timeline by (shotDuration - transitionDuration),
       // so we accumulate both across the chain.
-      cumulativeOffset += (shots[i]?.duration ?? 5);
+      cumulativeOffset += shots[i]?.duration ?? 5;
       cumulativeOffset -= transDuration;
 
       const xfade = this.buildXfade(
@@ -187,17 +209,15 @@ export class FFmpegService {
 
     if (bgmPath) {
       const bgmIdx = shots.length;
-      filters.push(
-        `[${bgmIdx}:a]volume=${bgmVolume},atrim=0:99999[bgm]`,
-      );
+      filters.push(`[${bgmIdx}:a]volume=${bgmVolume},atrim=0:99999[bgm]`);
 
       // Mix all original audio
       if (audioInputs.length === 1) {
-        filters.push(
-          `${audioInputs[0]}volume=${originalVolume}[orig]`,
-        );
+        filters.push(`${audioInputs[0]}volume=${originalVolume}[orig]`);
       } else {
-        const audioMixes = audioInputs.map((a, i) => `${a}volume=${originalVolume}[a${i}]`).join(';');
+        const audioMixes = audioInputs
+          .map((a, i) => `${a}volume=${originalVolume}[a${i}]`)
+          .join(';');
         filters.push(audioMixes);
         const joined = audioInputs.map((_, i) => `[a${i}]`).join('');
         filters.push(`${joined}amix=inputs=${audioInputs.length}:duration=longest[orig]`);
@@ -208,7 +228,9 @@ export class FFmpegService {
       if (audioInputs.length === 1) {
         filters.push(`${audioInputs[0]}volume=${originalVolume}[aout]`);
       } else {
-        const audioMixes = audioInputs.map((a, i) => `${a}volume=${originalVolume}[a${i}]`).join(';');
+        const audioMixes = audioInputs
+          .map((a, i) => `${a}volume=${originalVolume}[a${i}]`)
+          .join(';');
         filters.push(audioMixes);
         const joined = audioInputs.map((_, i) => `[a${i}]`).join('');
         filters.push(`${joined}amix=inputs=${audioInputs.length}:duration=longest[aout]`);
@@ -231,9 +253,9 @@ export class FFmpegService {
     }
 
     const xfadeMap: Record<string, string> = {
-      'dissolve': 'dissolve',
-      'fade': 'fadeblack',
-      'wipe': 'wipeleft',
+      dissolve: 'dissolve',
+      fade: 'fadeblack',
+      wipe: 'wipeleft',
     };
 
     const xfadeType = xfadeMap[type] ?? 'dissolve';

@@ -58,11 +58,7 @@ const ProjectContext = createContext<{
 
 export function ProjectProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
-  return (
-    <ProjectContext.Provider value={{ state, dispatch }}>
-      {children}
-    </ProjectContext.Provider>
-  );
+  return <ProjectContext.Provider value={{ state, dispatch }}>{children}</ProjectContext.Provider>;
 }
 
 // eslint-disable-next-line react-refresh/only-export-components

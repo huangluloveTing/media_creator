@@ -1,4 +1,11 @@
-import { type Project, type ProjectFull, type Setting, type Shot, type EdgeData, type GenerationTask } from '../types';
+import {
+  type Project,
+  type ProjectFull,
+  type Setting,
+  type Shot,
+  type EdgeData,
+  type GenerationTask,
+} from '../types';
 
 const BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3001/api';
 
@@ -42,16 +49,14 @@ export const api = {
     request<Project>('/projects', { method: 'POST', body: JSON.stringify({ title }) }),
   updateProject: (id: string, data: Partial<Project>) =>
     request<Project>(`/projects/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-  deleteProject: (id: string) =>
-    request<void>(`/projects/${id}`, { method: 'DELETE' }),
+  deleteProject: (id: string) => request<void>(`/projects/${id}`, { method: 'DELETE' }),
 
   // Shots
   createShot: (data: { projectId: string; order?: number }) =>
     request<Shot>('/shots', { method: 'POST', body: JSON.stringify(data) }),
   updateShot: (id: string, data: Partial<Shot>) =>
     request<Shot>(`/shots/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-  deleteShot: (id: string) =>
-    request<void>(`/shots/${id}`, { method: 'DELETE' }),
+  deleteShot: (id: string) => request<void>(`/shots/${id}`, { method: 'DELETE' }),
   reorderShot: (id: string, newOrder: number) =>
     request<void>(`/shots/${id}/reorder`, {
       method: 'PUT',
@@ -69,8 +74,7 @@ export const api = {
     request<{ ok: boolean }>(`/projects/${projectId}/generate-all`, {
       method: 'POST',
     }),
-  getShotsWithStatus: (projectId: string) =>
-    request<Shot[]>(`/projects/${projectId}/shots`),
+  getShotsWithStatus: (projectId: string) => request<Shot[]>(`/projects/${projectId}/shots`),
   merge: (projectId: string) =>
     request<{ ok: boolean; url: string }>(`/projects/${projectId}/merge`, {
       method: 'POST',

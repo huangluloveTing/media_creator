@@ -14,8 +14,7 @@ const customTheme = {
     colorError: '#f87171',
     colorInfo: '#4f7cff',
     borderRadius: 10,
-    fontFamily:
-      "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
     colorBgBase: '#0a0a1a',
     colorBgContainer: '#131330',
     colorBgElevated: '#1a1a40',
@@ -57,7 +56,14 @@ export default function App() {
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<ProjectListPage />} />
-            <Route path="/project/:projectId" element={<ProjectProvider><ProjectEditorPage /></ProjectProvider>} />
+            <Route
+              path="/project/:projectId"
+              element={
+                <ProjectProvider>
+                  <ProjectEditorPage />
+                </ProjectProvider>
+              }
+            />
             <Route path="/settings" element={<SettingsPage />} />
           </Routes>
         </BrowserRouter>

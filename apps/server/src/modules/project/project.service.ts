@@ -169,9 +169,11 @@ export class ProjectService {
       project.status = 'ready_to_merge';
     } else if (generationTasks.some((t) => t.status === 'failed')) {
       // If some failed but none are actively generating, keep as draft or ready_to_merge
-      project.status = generationTasks.every((t) =>
-        t.status === 'completed' || t.status === 'failed'
-      ) ? 'ready_to_merge' : 'draft';
+      project.status = generationTasks.every(
+        (t) => t.status === 'completed' || t.status === 'failed',
+      )
+        ? 'ready_to_merge'
+        : 'draft';
     } else {
       project.status = 'draft';
     }

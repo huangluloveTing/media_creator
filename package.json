@@ -6,7 +6,12 @@
     "dev": "pnpm -r run dev",
     "build": "pnpm -r run build",
     "lint": "pnpm -r run lint",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "test": "pnpm -r run test",
     "typecheck": "pnpm -r run typecheck"
+  },
+  "devDependencies": {
+    "prettier": "^3.8.3"
   }
 }

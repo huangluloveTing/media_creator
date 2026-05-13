@@ -17,7 +17,16 @@ function StartNode({ data, selected }: NodeProps) {
         transition: 'box-shadow 0.2s',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#34d399', fontWeight: 600, fontSize: 14 }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          color: '#34d399',
+          fontWeight: 600,
+          fontSize: 14,
+        }}
+      >
         <FlagOutlined style={{ fontSize: 17 }} />
         <span>开始</span>
       </div>
@@ -26,7 +35,11 @@ function StartNode({ data, selected }: NodeProps) {
           {data.summary}
         </div>
       )}
-      <Handle type="source" position={Position.Bottom} style={{ background: '#34d399', width: 10, height: 10 }} />
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        style={{ background: '#34d399', width: 10, height: 10 }}
+      />
     </div>
   );
 }

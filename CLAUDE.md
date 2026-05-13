@@ -15,12 +15,12 @@
 
 ### 核心技能
 
-| 阶段 | 技能 | 作用 |
-|------|------|------|
-| 规划 | `openspec` | 生成规范文档（proposal.md / design.md / tasks.md） |
-| 审查 | `plan-eng-review` | 工程审查：架构、质量、测试、性能 |
-| 实现 | `subagent-driven-development` | 每个任务独立 subagent + 两阶段审查 |
-| 归档 | `openspec-archive-change` | 归档完成的 change |
+| 阶段 | 技能                          | 作用                                               |
+| ---- | ----------------------------- | -------------------------------------------------- |
+| 规划 | `openspec`                    | 生成规范文档（proposal.md / design.md / tasks.md） |
+| 审查 | `plan-eng-review`             | 工程审查：架构、质量、测试、性能                   |
+| 实现 | `subagent-driven-development` | 每个任务独立 subagent + 两阶段审查                 |
+| 归档 | `openspec-archive-change`     | 归档完成的 change                                  |
 
 ### 命令
 

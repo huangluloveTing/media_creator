@@ -1,6 +1,12 @@
 import { memo } from 'react';
 import { Handle, Position, NodeProps } from '@xyflow/react';
-import { PlayCircleOutlined, LoadingOutlined, CheckCircleOutlined, CloseCircleOutlined, ClockCircleOutlined } from '@ant-design/icons';
+import {
+  PlayCircleOutlined,
+  LoadingOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  ClockCircleOutlined,
+} from '@ant-design/icons';
 
 const statusIcons: Record<string, React.ReactNode> = {
   draft: <PlayCircleOutlined style={{ color: '#64748b', fontSize: 15 }} />,
@@ -38,8 +44,19 @@ function ShotNode({ data, selected }: NodeProps) {
         ...base,
       }}
     >
-      <Handle type="target" position={Position.Top} style={{ background: '#475569', width: 10, height: 10 }} />
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+      <Handle
+        type="target"
+        position={Position.Top}
+        style={{ background: '#475569', width: 10, height: 10 }}
+      />
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: 4,
+        }}
+      >
         <span style={{ fontSize: 11, fontWeight: 600, color: '#64748b' }}>#{data.order}</span>
         {statusIcons[status]}
       </div>
@@ -57,7 +74,16 @@ function ShotNode({ data, selected }: NodeProps) {
         {data.promptPreview || '空提示词'}
       </div>
       {status === 'generating' && (
-        <div style={{ marginTop: 10, width: '100%', background: '#1e1e4a', borderRadius: 99, height: 6, overflow: 'hidden' }}>
+        <div
+          style={{
+            marginTop: 10,
+            width: '100%',
+            background: '#1e1e4a',
+            borderRadius: 99,
+            height: 6,
+            overflow: 'hidden',
+          }}
+        >
           <div
             style={{
               background: 'linear-gradient(90deg, #4f7cff, #6366f1)',
@@ -70,11 +96,24 @@ function ShotNode({ data, selected }: NodeProps) {
         </div>
       )}
       {status === 'failed' && data.errorPreview && (
-        <div style={{ fontSize: 11, color: '#f87171', marginTop: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <div
+          style={{
+            fontSize: 11,
+            color: '#f87171',
+            marginTop: 6,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
           {data.errorPreview}
         </div>
       )}
-      <Handle type="source" position={Position.Bottom} style={{ background: '#475569', width: 10, height: 10 }} />
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        style={{ background: '#475569', width: 10, height: 10 }}
+      />
     </div>
   );
 }

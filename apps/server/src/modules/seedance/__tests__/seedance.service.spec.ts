@@ -45,7 +45,9 @@ describe('SeedanceService', () => {
     }).compile();
 
     const svc2 = module2.get(SeedanceService);
-    await expect(svc2.submit({ prompt: 'test' })).rejects.toThrow('Seedance API key not configured');
+    await expect(svc2.submit({ prompt: 'test' })).rejects.toThrow(
+      'Seedance API key not configured',
+    );
   });
 
   it('uses db key when available', async () => {
@@ -65,6 +67,8 @@ describe('SeedanceService', () => {
 
     const svc2 = module2.get(SeedanceService);
     // The submit will fail at HTTP level (fake key), but it should NOT throw "API key not configured"
-    await expect(svc2.submit({ prompt: 'test' })).rejects.not.toThrow('Seedance API key not configured');
+    await expect(svc2.submit({ prompt: 'test' })).rejects.not.toThrow(
+      'Seedance API key not configured',
+    );
   });
 });

@@ -138,7 +138,14 @@ function ShotsContainerNode(_: NodeProps) {
           <CameraOutlined style={{ color: '#4f7cff', fontSize: 14 }} />
         </div>
         <span style={{ color: '#e2e8f0', fontSize: 14, fontWeight: 600 }}>分镜流程</span>
-        <Tag style={{ marginLeft: 'auto', background: '#1a1a40', borderColor: '#2a2a5a', color: '#94a3b8' }}>
+        <Tag
+          style={{
+            marginLeft: 'auto',
+            background: '#1a1a40',
+            borderColor: '#2a2a5a',
+            color: '#94a3b8',
+          }}
+        >
           {shots.length} 个
         </Tag>
       </div>
@@ -316,13 +323,7 @@ function ShotCard({
   );
 }
 
-function ProgressStrip({
-  status,
-  progress,
-}: {
-  status: string;
-  progress: number;
-}) {
+function ProgressStrip({ status, progress }: { status: string; progress: number }) {
   const indeterminate = status === 'queued';
   return (
     <div
@@ -369,9 +370,8 @@ function ProgressStrip({
 }
 
 function TransitionArrow({ edge }: { edge: EdgeData | undefined }) {
-  const label = edge ? transitionLabels[edge.transitionType] ?? edge.transitionType : 'cut';
-  const showDuration =
-    edge && edge.transitionType !== 'cut' && edge.transitionType !== 'none';
+  const label = edge ? (transitionLabels[edge.transitionType] ?? edge.transitionType) : 'cut';
+  const showDuration = edge && edge.transitionType !== 'cut' && edge.transitionType !== 'none';
 
   return (
     <div

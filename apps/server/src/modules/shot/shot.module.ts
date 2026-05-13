@@ -10,11 +10,7 @@ import { SeedanceModule } from '../seedance/seedance.module';
 import { ProjectModule } from '../project/project.module';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([Shot, Edge, GenerationTask]),
-    SeedanceModule,
-    ProjectModule,
-  ],
+  imports: [TypeOrmModule.forFeature([Shot, Edge, GenerationTask]), SeedanceModule, ProjectModule],
   controllers: [ShotController, EdgeController],
   providers: [ShotService],
   exports: [ShotService],

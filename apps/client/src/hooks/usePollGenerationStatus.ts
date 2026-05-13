@@ -36,7 +36,9 @@ export function usePollGenerationStatus() {
     };
   }, [
     state.project?.id,
-    state.project?.shots.some((s) => s.generation?.status === 'queued' || s.generation?.status === 'generating'),
+    state.project?.shots.some(
+      (s) => s.generation?.status === 'queued' || s.generation?.status === 'generating',
+    ),
     state.pollInterval,
     dispatch,
   ]);

@@ -19,10 +19,7 @@ import type { ProjectFull } from '../types';
 import StartNode from './nodes/StartNode';
 import ShotsContainerNode from './nodes/ShotsContainerNode';
 import MergeNode from './nodes/MergeNode';
-import {
-  getShotsContainerWidth,
-  getShotsContainerHeight,
-} from './nodes/shotsContainerLayout';
+import { getShotsContainerWidth, getShotsContainerHeight } from './nodes/shotsContainerLayout';
 
 const nodeTypes: NodeTypes = {
   start: StartNode,

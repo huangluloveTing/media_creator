@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { Processor, WorkerHost, OnWorkerEvent } from '@nestjs/bullmq';
 import { Logger, Inject, forwardRef } from '@nestjs/common';
 import { Job } from 'bullmq';
@@ -55,7 +56,7 @@ export class GenerationWorker extends WorkerHost {
       throw new Error(`Shot ${shotId} or its generation task not found`);
     }
 
-    let task = shot.generationTask;
+    const task = shot.generationTask;
 
     // Step 1: Submit to Seedance if no taskId
     let seedanceTaskId = task.taskId || '';
@@ -218,9 +219,9 @@ export class GenerationWorker extends WorkerHost {
     _progress: number,
     _errorMessage?: string,
   ): void {
-    this.projectService.recalculateStatus(projectId).catch(
-      (err: any) => this.logger.warn(`recalculateStatus failed: ${err.message}`),
-    );
+    this.projectService
+      .recalculateStatus(projectId)
+      .catch((err: any) => this.logger.warn(`recalculateStatus failed: ${err.message}`));
   }
 
   private buildCameraKeywords(shot: Shot): string {

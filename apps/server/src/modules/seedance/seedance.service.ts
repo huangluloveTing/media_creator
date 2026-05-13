@@ -151,10 +151,14 @@ export class SeedanceService {
 
     return new Promise((resolve, reject) => {
       const proc = spawn('ffmpeg', [
-        '-sseof', '-1',
-        '-i', videoPath,
-        '-vframes', '1',
-        '-q:v', '2',
+        '-sseof',
+        '-1',
+        '-i',
+        videoPath,
+        '-vframes',
+        '1',
+        '-q:v',
+        '2',
         '-y',
         outputPath,
       ]);

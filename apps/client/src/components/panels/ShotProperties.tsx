@@ -1,6 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Input, Select, InputNumber, Button, Typography, Tag, message, Progress } from 'antd';
-import { CameraOutlined, ThunderboltOutlined, ReloadOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import {
+  CameraOutlined,
+  ThunderboltOutlined,
+  ReloadOutlined,
+  CheckCircleOutlined,
+} from '@ant-design/icons';
 import { useProject } from '../../context/ProjectContext';
 import { api, getShotVideoUrl } from '../../api/client';
 
@@ -69,7 +74,9 @@ export default function ShotProperties({ shotId }: { shotId: string }) {
   // Fetch presigned URL when generation completes
   useEffect(() => {
     if (shot?.generation?.status === 'completed') {
-      getShotVideoUrl(shotId).then(setVideoUrl).catch(() => setVideoUrl(null));
+      getShotVideoUrl(shotId)
+        .then(setVideoUrl)
+        .catch(() => setVideoUrl(null));
     }
   }, [shot?.generation?.status, shotId]);
 
@@ -79,7 +86,9 @@ export default function ShotProperties({ shotId }: { shotId: string }) {
     const updated = await api.updateShot(shotId, { [field]: value });
     dispatch({
       type: 'UPDATE_PROJECT',
-      payload: { shots: state.project!.shots.map((s) => (s.id === shotId ? { ...s, ...updated } : s)) },
+      payload: {
+        shots: state.project!.shots.map((s) => (s.id === shotId ? { ...s, ...updated } : s)),
+      },
     });
   };
 
@@ -140,9 +149,13 @@ export default function ShotProperties({ shotId }: { shotId: string }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div
             style={{
-              width: 28, height: 28, borderRadius: 8,
+              width: 28,
+              height: 28,
+              borderRadius: 8,
               background: 'rgba(79, 124, 255, 0.15)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
             <CameraOutlined style={{ color: '#4f7cff', fontSize: 14 }} />
@@ -167,39 +180,99 @@ export default function ShotProperties({ shotId }: { shotId: string }) {
       </Label>
 
       {/* Camera */}
-      <fieldset style={{ border: '1px solid #1e1e4a', borderRadius: 10, padding: '12px 16px', margin: 0 }}>
-        <legend style={{ color: '#64748b', fontSize: 11, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', padding: '0 4px' }}>
+      <fieldset
+        style={{ border: '1px solid #1e1e4a', borderRadius: 10, padding: '12px 16px', margin: 0 }}
+      >
+        <legend
+          style={{
+            color: '#64748b',
+            fontSize: 11,
+            fontWeight: 600,
+            letterSpacing: '0.05em',
+            textTransform: 'uppercase',
+            padding: '0 4px',
+          }}
+        >
           镜头参数
         </legend>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <Label text="景别">
-            <Select value={shot.shotSize} onChange={(v) => update('shotSize', v)} style={formStyle} options={shotSizeOptions} />
+            <Select
+              value={shot.shotSize}
+              onChange={(v) => update('shotSize', v)}
+              style={formStyle}
+              options={shotSizeOptions}
+            />
           </Label>
           <Label text="角度">
-            <Select value={shot.angle} onChange={(v) => update('angle', v)} style={formStyle} options={angleOptions} />
+            <Select
+              value={shot.angle}
+              onChange={(v) => update('angle', v)}
+              style={formStyle}
+              options={angleOptions}
+            />
           </Label>
           <Label text="运动">
-            <Select value={shot.movement} onChange={(v) => update('movement', v)} style={formStyle} options={movementOptions} />
+            <Select
+              value={shot.movement}
+              onChange={(v) => update('movement', v)}
+              style={formStyle}
+              options={movementOptions}
+            />
           </Label>
           <Label text="时长 (秒)">
-            <InputNumber value={shot.duration} min={4} max={15} step={1} onChange={(v) => update('duration', v ?? 5)} style={formStyle} />
+            <InputNumber
+              value={shot.duration}
+              min={4}
+              max={15}
+              step={1}
+              onChange={(v) => update('duration', v ?? 5)}
+              style={formStyle}
+            />
           </Label>
         </div>
       </fieldset>
 
       {/* Model */}
-      <fieldset style={{ border: '1px solid #1e1e4a', borderRadius: 10, padding: '12px 16px', margin: 0 }}>
-        <legend style={{ color: '#64748b', fontSize: 11, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', padding: '0 4px' }}>
+      <fieldset
+        style={{ border: '1px solid #1e1e4a', borderRadius: 10, padding: '12px 16px', margin: 0 }}
+      >
+        <legend
+          style={{
+            color: '#64748b',
+            fontSize: 11,
+            fontWeight: 600,
+            letterSpacing: '0.05em',
+            textTransform: 'uppercase',
+            padding: '0 4px',
+          }}
+        >
           生成参数
         </legend>
         <Label text="模型">
-          <Select value={shot.model} onChange={(v) => update('model', v)} style={formStyle} options={modelOptions} />
+          <Select
+            value={shot.model}
+            onChange={(v) => update('model', v)}
+            style={formStyle}
+            options={modelOptions}
+          />
         </Label>
       </fieldset>
 
       {/* Transition out */}
-      <fieldset style={{ border: '1px solid #1e1e4a', borderRadius: 10, padding: '12px 16px', margin: 0 }}>
-        <legend style={{ color: '#64748b', fontSize: 11, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', padding: '0 4px' }}>
+      <fieldset
+        style={{ border: '1px solid #1e1e4a', borderRadius: 10, padding: '12px 16px', margin: 0 }}
+      >
+        <legend
+          style={{
+            color: '#64748b',
+            fontSize: 11,
+            fontWeight: 600,
+            letterSpacing: '0.05em',
+            textTransform: 'uppercase',
+            padding: '0 4px',
+          }}
+        >
           转场到下一镜
         </legend>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -232,25 +305,33 @@ export default function ShotProperties({ shotId }: { shotId: string }) {
       {/* Actions / Status / Preview */}
       {genStatus === 'completed' ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#34d399', fontSize: 13 }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              color: '#34d399',
+              fontSize: 13,
+            }}
+          >
             <CheckCircleOutlined /> 生成完成
           </div>
           {videoUrl ? (
-          <video
-            key={shot.generation?.id}
-            controls
-            src={videoUrl}
-            style={{
-              width: '100%',
-              borderRadius: 8,
-              background: '#000',
-              border: '1px solid #1e1e4a',
-            }}
-          />
+            <video
+              key={shot.generation?.id}
+              controls
+              src={videoUrl}
+              style={{
+                width: '100%',
+                borderRadius: 8,
+                background: '#000',
+                border: '1px solid #1e1e4a',
+              }}
+            />
           ) : (
-          <div style={{ color: '#64748b', fontSize: 12, textAlign: 'center', padding: 12 }}>
-            获取视频地址中...
-          </div>
+            <div style={{ color: '#64748b', fontSize: 12, textAlign: 'center', padding: 12 }}>
+              获取视频地址中...
+            </div>
           )}
           <Button
             block

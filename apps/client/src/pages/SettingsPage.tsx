@@ -42,7 +42,9 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+      <div
+        style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}
+      >
         <Spin tip="加载配置..." />
       </div>
     );
@@ -59,11 +61,7 @@ export default function SettingsPage() {
       <div style={{ maxWidth: 640, margin: '0 auto' }}>
         <Space align="center" style={{ marginBottom: 32 }}>
           <Link to="/">
-            <Button
-              type="text"
-              icon={<ArrowLeftOutlined />}
-              style={{ color: '#94a3b8' }}
-            />
+            <Button type="text" icon={<ArrowLeftOutlined />} style={{ color: '#94a3b8' }} />
           </Link>
           <div
             style={{
@@ -80,7 +78,9 @@ export default function SettingsPage() {
             <SettingOutlined style={{ fontSize: 22, color: '#fff' }} />
           </div>
           <div>
-            <Title level={4} style={{ margin: 0, color: '#e2e8f0' }}>API 配置</Title>
+            <Title level={4} style={{ margin: 0, color: '#e2e8f0' }}>
+              API 配置
+            </Title>
             <Text type="secondary">配置 Seedance API Key</Text>
           </div>
         </Space>

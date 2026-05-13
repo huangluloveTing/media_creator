@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Input, Button, Slider, Typography, message, Spin } from 'antd';
 import { MergeCellsOutlined, DownloadOutlined, ReloadOutlined } from '@ant-design/icons';
 import { useProject } from '../../context/ProjectContext';
@@ -31,33 +31,31 @@ export default function MergeProperties() {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [loadingVideo, setLoadingVideo] = useState(false);
 
+  const projectId = project?.id;
+  const finalVideoKey = project?.finalVideoKey;
+  const projectStatus = project?.status;
+
+  useEffect(() => {
+    if (projectStatus === 'completed' && finalVideoKey) {
+      const controller = new AbortController();
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setLoadingVideo(true);
+      api.getFinalVideoUrl(projectId!).then(
+        (result) => { if (!controller.signal.aborted) setVideoUrl(result.url); },
+        () => { if (!controller.signal.aborted) setVideoUrl(null); },
+      ).finally(() => { if (!controller.signal.aborted) setLoadingVideo(false); });
+      return () => controller.abort();
+    } else {
+      setVideoUrl(null);
+    }
+  }, [projectStatus, finalVideoKey, projectId]);
+
   if (!project) return null;
 
   const update = async (field: string, value: unknown) => {
     const updated = await api.updateProject(project.id, { [field]: value });
     dispatch({ type: 'UPDATE_PROJECT', payload: updated });
   };
-
-  const loadFinalVideo = useCallback(async () => {
-    if (!project.finalVideoKey) return;
-    setLoadingVideo(true);
-    try {
-      const result = await api.getFinalVideoUrl(project.id);
-      setVideoUrl(result.url);
-    } catch {
-      setVideoUrl(null);
-    } finally {
-      setLoadingVideo(false);
-    }
-  }, [project.id, project.finalVideoKey]);
-
-  useEffect(() => {
-    if (project.status === 'completed' && project.finalVideoKey) {
-      loadFinalVideo();
-    } else {
-      setVideoUrl(null);
-    }
-  }, [project.status, project.finalVideoKey, loadFinalVideo]);
 
   const handleMerge = async () => {
     setMerging(true);
@@ -80,9 +78,13 @@ export default function MergeProperties() {
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <div
           style={{
-            width: 28, height: 28, borderRadius: 8,
+            width: 28,
+            height: 28,
+            borderRadius: 8,
             background: 'rgba(168, 85, 247, 0.15)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
           }}
         >
           <MergeCellsOutlined style={{ color: '#a855f7', fontSize: 14 }} />
@@ -94,11 +96,7 @@ export default function MergeProperties() {
 
       {videoUrl && (
         <div style={videoContainerStyle}>
-          <video
-            controls
-            style={{ width: '100%', height: '100%' }}
-            src={videoUrl}
-          >
+          <video controls style={{ width: '100%', height: '100%' }} src={videoUrl}>
             您的浏览器不支持视频播放
           </video>
         </div>
@@ -112,29 +110,39 @@ export default function MergeProperties() {
 
       {!videoUrl && !loadingVideo && project.status === 'completed' && (
         <div style={{ ...videoContainerStyle, background: '#0d0d2b' }}>
-          <Text style={{ color: '#64748b', fontSize: 13 }}>
-            合成结果不可用
-          </Text>
+          <Text style={{ color: '#64748b', fontSize: 13 }}>合成结果不可用</Text>
         </div>
       )}
 
       <Label text="背景音乐 (路径)">
-        <Input value={project.bgmPath ?? ''}
+        <Input
+          value={project.bgmPath ?? ''}
           placeholder="/path/to/bgm.mp3"
           onChange={(e) => update('bgmPath', e.target.value || null)}
-          style={formStyle} />
+          style={formStyle}
+        />
       </Label>
 
       <Label text={`BGM 音量 — ${Math.round(project.bgmVolume * 100)}%`}>
-        <Slider min={0} max={1} step={0.05} value={project.bgmVolume}
+        <Slider
+          min={0}
+          max={1}
+          step={0.05}
+          value={project.bgmVolume}
           onChange={(v) => update('bgmVolume', v)}
-          trackStyle={{ background: '#a855f7' }} />
+          trackStyle={{ background: '#a855f7' }}
+        />
       </Label>
 
       <Label text={`原声音量 — ${Math.round(project.originalVolume * 100)}%`}>
-        <Slider min={0} max={1} step={0.05} value={project.originalVolume}
+        <Slider
+          min={0}
+          max={1}
+          step={0.05}
+          value={project.originalVolume}
           onChange={(v) => update('originalVolume', v)}
-          trackStyle={{ background: '#a855f7' }} />
+          trackStyle={{ background: '#a855f7' }}
+        />
       </Label>
 
       <Button
@@ -151,7 +159,13 @@ export default function MergeProperties() {
           fontWeight: 600,
         }}
       >
-        {merging ? '合成中...' : project.status === 'completed' ? '重新合成' : canMerge ? '合成导出' : '镜头未就绪'}
+        {merging
+          ? '合成中...'
+          : project.status === 'completed'
+            ? '重新合成'
+            : canMerge
+              ? '合成导出'
+              : '镜头未就绪'}
       </Button>
     </div>
   );
@@ -160,7 +174,17 @@ export default function MergeProperties() {
 function Label({ text, children }: { text: string; children: React.ReactNode }) {
   return (
     <div>
-      <Text style={{ color: '#64748b', fontSize: 11, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>
+      <Text
+        style={{
+          color: '#64748b',
+          fontSize: 11,
+          fontWeight: 600,
+          letterSpacing: '0.05em',
+          textTransform: 'uppercase',
+          display: 'block',
+          marginBottom: 6,
+        }}
+      >
         {text}
       </Text>
       {children}

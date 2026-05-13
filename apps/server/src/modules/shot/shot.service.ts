@@ -261,13 +261,7 @@ export class ShotService {
       targetEdge.position = 1;
       await edgeRepo.save(targetEdge);
     } else {
-      await this.makeEdge(
-        projectId,
-        targetEdge.sourceShotId,
-        newShotId,
-        edgeIndex,
-        manager,
-      );
+      await this.makeEdge(projectId, targetEdge.sourceShotId, newShotId, edgeIndex, manager);
       targetEdge.sourceShotId = newShotId;
       targetEdge.position = edgeIndex + 1;
       await edgeRepo.save(targetEdge);
@@ -306,12 +300,6 @@ export class ShotService {
     }
 
     // Last shot → Merge
-    await this.makeEdge(
-      projectId,
-      shots[shots.length - 1].id,
-      null,
-      shots.length,
-      manager,
-    );
+    await this.makeEdge(projectId, shots[shots.length - 1].id, null, shots.length, manager);
   }
 }

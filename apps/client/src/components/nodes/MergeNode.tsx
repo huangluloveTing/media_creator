@@ -17,7 +17,16 @@ function MergeNode({ data, selected }: NodeProps) {
         transition: 'box-shadow 0.2s',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#a855f7', fontWeight: 600, fontSize: 14 }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          color: '#a855f7',
+          fontWeight: 600,
+          fontSize: 14,
+        }}
+      >
         <MergeCellsOutlined style={{ fontSize: 17 }} />
         <span>合成</span>
       </div>
@@ -29,7 +38,11 @@ function MergeNode({ data, selected }: NodeProps) {
       {data.readyToMerge && (
         <div style={{ fontSize: 11, color: '#34d399', marginTop: 4 }}>可合成</div>
       )}
-      <Handle type="target" position={Position.Top} style={{ background: '#a855f7', width: 10, height: 10 }} />
+      <Handle
+        type="target"
+        position={Position.Top}
+        style={{ background: '#a855f7', width: 10, height: 10 }}
+      />
     </div>
   );
 }

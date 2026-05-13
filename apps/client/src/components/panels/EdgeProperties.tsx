@@ -29,7 +29,9 @@ export default function EdgeProperties({ edgeId }: { edgeId: string }) {
     const updated = await api.updateEdge(edgeId, { [field]: value });
     dispatch({
       type: 'UPDATE_PROJECT',
-      payload: { edges: state.project!.edges.map((e) => (e.id === edgeId ? { ...e, ...updated } : e)) },
+      payload: {
+        edges: state.project!.edges.map((e) => (e.id === edgeId ? { ...e, ...updated } : e)),
+      },
     });
   };
 
@@ -38,9 +40,13 @@ export default function EdgeProperties({ edgeId }: { edgeId: string }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <div
           style={{
-            width: 28, height: 28, borderRadius: 8,
+            width: 28,
+            height: 28,
+            borderRadius: 8,
             background: 'rgba(251, 191, 36, 0.15)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
           }}
         >
           <ArrowRightOutlined style={{ color: '#fbbf24', fontSize: 14 }} />
@@ -51,24 +57,34 @@ export default function EdgeProperties({ edgeId }: { edgeId: string }) {
       </div>
 
       <Label text="转场类型">
-        <Select value={edge.transitionType} onChange={(v) => update('transitionType', v)}
-          style={formStyle} options={transitionOptions} />
+        <Select
+          value={edge.transitionType}
+          onChange={(v) => update('transitionType', v)}
+          style={formStyle}
+          options={transitionOptions}
+        />
       </Label>
 
       {edge.transitionType !== 'cut' && edge.transitionType !== 'none' && (
         <Label text="时长 (秒)">
-          <InputNumber value={edge.transitionDuration}
-            min={0} max={5} step={0.1}
+          <InputNumber
+            value={edge.transitionDuration}
+            min={0}
+            max={5}
+            step={0.1}
             onChange={(v) => update('transitionDuration', v ?? 0)}
-            style={formStyle} />
+            style={formStyle}
+          />
         </Label>
       )}
 
       <Label text="字幕文本">
-        <Input value={edge.subtitleText ?? ''}
+        <Input
+          value={edge.subtitleText ?? ''}
           placeholder="例如：三天后..."
           onChange={(e) => update('subtitleText', e.target.value || null)}
-          style={formStyle} />
+          style={formStyle}
+        />
       </Label>
     </div>
   );
@@ -77,7 +93,17 @@ export default function EdgeProperties({ edgeId }: { edgeId: string }) {
 function Label({ text, children }: { text: string; children: React.ReactNode }) {
   return (
     <div>
-      <Text style={{ color: '#64748b', fontSize: 11, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>
+      <Text
+        style={{
+          color: '#64748b',
+          fontSize: 11,
+          fontWeight: 600,
+          letterSpacing: '0.05em',
+          textTransform: 'uppercase',
+          display: 'block',
+          marginBottom: 6,
+        }}
+      >
         {text}
       </Text>
       {children}

@@ -40,7 +40,10 @@ export default function ProjectListPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.getProjects().then(setProjects).finally(() => setLoading(false));
+    api
+      .getProjects()
+      .then(setProjects)
+      .finally(() => setLoading(false));
   }, []);
 
   const handleCreate = async () => {
@@ -183,10 +186,7 @@ export default function ProjectListPage() {
                       </Text>
                     </div>
                     <Space size={12} align="center">
-                      <Tag
-                        color={s.color}
-                        style={{ margin: 0, fontSize: 12 }}
-                      >
+                      <Tag color={s.color} style={{ margin: 0, fontSize: 12 }}>
                         {s.label}
                       </Tag>
                       <Popconfirm

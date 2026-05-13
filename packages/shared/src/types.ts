@@ -1,4 +1,12 @@
-import type { ProjectStatus, ShotSize, ShotAngle, ShotMovement, ShotModel, TransitionType, TaskStatus } from './enums';
+import type {
+  ProjectStatus,
+  ShotSize,
+  ShotAngle,
+  ShotMovement,
+  ShotModel,
+  TransitionType,
+  TaskStatus,
+} from './enums';
 
 export interface Project {
   id: string;

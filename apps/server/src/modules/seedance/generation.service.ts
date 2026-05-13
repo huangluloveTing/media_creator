@@ -42,12 +42,12 @@ export class GenerationService implements OnModuleInit {
 
   private async validateApiKey(): Promise<void> {
     const apiKey =
-      (await this.settings.getRaw('seedance.apiKey')) ||
-      process.env['SEEDANCE_API_KEY'] ||
-      '';
+      (await this.settings.getRaw('seedance.apiKey')) || process.env['SEEDANCE_API_KEY'] || '';
     this.apiKeyValid = !!apiKey;
     if (!this.apiKeyValid) {
-      this.logger.warn('Seedance API Key not configured — 视频生成将失败，请在设置页面配置 API Key');
+      this.logger.warn(
+        'Seedance API Key not configured — 视频生成将失败，请在设置页面配置 API Key',
+      );
     } else {
       this.logger.log('Seedance API Key 已配置');
     }
