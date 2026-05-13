@@ -72,9 +72,11 @@ export const api = {
   getShotsWithStatus: (projectId: string) =>
     request<Shot[]>(`/projects/${projectId}/shots`),
   merge: (projectId: string) =>
-    request<{ ok: boolean; outputPath: string }>(`/projects/${projectId}/merge`, {
+    request<{ ok: boolean; url: string }>(`/projects/${projectId}/merge`, {
       method: 'POST',
     }),
+  getFinalVideoUrl: (projectId: string) =>
+    request<{ url: string }>(`/projects/${projectId}/final-video`),
 
   // Settings
   getSettings: () => request<Setting[]>('/settings'),

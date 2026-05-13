@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { Input, Button, Slider, Typography, message } from 'antd';
-import { MergeCellsOutlined, DownloadOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { useState, useEffect, useCallback } from 'react';
+import { Input, Button, Slider, Typography, message, Spin } from 'antd';
+import { MergeCellsOutlined, DownloadOutlined, ReloadOutlined } from '@ant-design/icons';
 import { useProject } from '../../context/ProjectContext';
 import { api } from '../../api/client';
 
@@ -13,10 +13,24 @@ const formStyle: React.CSSProperties = {
   color: '#e2e8f0',
 };
 
+const videoContainerStyle: React.CSSProperties = {
+  width: '100%',
+  aspectRatio: '16 / 9',
+  borderRadius: 8,
+  overflow: 'hidden',
+  background: '#000',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+};
+
 export default function MergeProperties() {
   const { state, dispatch } = useProject();
   const project = state.project;
   const [merging, setMerging] = useState(false);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [loadingVideo, setLoadingVideo] = useState(false);
+
   if (!project) return null;
 
   const update = async (field: string, value: unknown) => {
@@ -24,11 +38,34 @@ export default function MergeProperties() {
     dispatch({ type: 'UPDATE_PROJECT', payload: updated });
   };
 
+  const loadFinalVideo = useCallback(async () => {
+    if (!project.finalVideoKey) return;
+    setLoadingVideo(true);
+    try {
+      const result = await api.getFinalVideoUrl(project.id);
+      setVideoUrl(result.url);
+    } catch {
+      setVideoUrl(null);
+    } finally {
+      setLoadingVideo(false);
+    }
+  }, [project.id, project.finalVideoKey]);
+
+  useEffect(() => {
+    if (project.status === 'completed' && project.finalVideoKey) {
+      loadFinalVideo();
+    } else {
+      setVideoUrl(null);
+    }
+  }, [project.status, project.finalVideoKey, loadFinalVideo]);
+
   const handleMerge = async () => {
     setMerging(true);
     try {
       const result = await api.merge(project.id);
-      message.success(`合成完成！输出: ${result.outputPath}`);
+      setVideoUrl(result.url);
+      dispatch({ type: 'UPDATE_PROJECT', payload: { status: 'completed' } });
+      message.success('合成完成！');
     } catch (err: any) {
       message.error(`合成失败: ${err.message}`);
     } finally {
@@ -36,7 +73,7 @@ export default function MergeProperties() {
     }
   };
 
-  const canMerge = project.status === 'ready_to_merge';
+  const canMerge = project.status === 'ready_to_merge' || project.status === 'completed';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -54,6 +91,32 @@ export default function MergeProperties() {
           导出设置
         </Title>
       </div>
+
+      {videoUrl && (
+        <div style={videoContainerStyle}>
+          <video
+            controls
+            style={{ width: '100%', height: '100%' }}
+            src={videoUrl}
+          >
+            您的浏览器不支持视频播放
+          </video>
+        </div>
+      )}
+
+      {loadingVideo && (
+        <div style={videoContainerStyle}>
+          <Spin />
+        </div>
+      )}
+
+      {!videoUrl && !loadingVideo && project.status === 'completed' && (
+        <div style={{ ...videoContainerStyle, background: '#0d0d2b' }}>
+          <Text style={{ color: '#64748b', fontSize: 13 }}>
+            合成结果不可用
+          </Text>
+        </div>
+      )}
 
       <Label text="背景音乐 (路径)">
         <Input value={project.bgmPath ?? ''}
@@ -77,9 +140,9 @@ export default function MergeProperties() {
       <Button
         block
         type="primary"
-        icon={<DownloadOutlined />}
+        icon={project.status === 'completed' ? <ReloadOutlined /> : <DownloadOutlined />}
         onClick={handleMerge}
-        disabled={!canMerge || merging}
+        disabled={merging}
         style={{
           height: 38,
           borderRadius: 8,
@@ -88,14 +151,8 @@ export default function MergeProperties() {
           fontWeight: 600,
         }}
       >
-        {merging ? '合成中...' : canMerge ? '合成导出' : '镜头未就绪'}
+        {merging ? '合成中...' : project.status === 'completed' ? '重新合成' : canMerge ? '合成导出' : '镜头未就绪'}
       </Button>
-
-      {project.status === 'completed' && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#34d399', fontSize: 13 }}>
-          <CheckCircleOutlined /> 导出完成！
-        </div>
-      )}
     </div>
   );
 }

@@ -74,6 +74,21 @@ export class StorageService implements OnModuleInit {
   }
 
   /**
+   * Download a file from MinIO to a local path.
+   */
+  async downloadFile(objectKey: string, localPath: string): Promise<void> {
+    const command = new GetObjectCommand({ Bucket: this.bucket, Key: objectKey });
+    const response = await this.client.send(command);
+    const { createWriteStream } = await import('fs');
+    const writer = createWriteStream(localPath);
+    await new Promise<void>((resolve, reject) => {
+      (response.Body as any).pipe(writer);
+      writer.on('finish', resolve);
+      writer.on('error', reject);
+    });
+  }
+
+  /**
    * Get a presigned URL for downloading/viewing an object.
    */
   async getPresignedUrl(objectKey: string, expiresInSeconds = 3600): Promise<string> {

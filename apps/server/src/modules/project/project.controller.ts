@@ -76,29 +76,39 @@ export class ProjectController {
 
     await this.projectService.updateStatus(id, 'merging');
 
-    // Use a temp file for FFmpeg output
     const tmpDir = path.join(process.cwd(), 'tmp');
     await fs.mkdir(tmpDir, { recursive: true });
+    const tmpFiles: string[] = [];
     const tmpOutput = path.join(tmpDir, `merge_${uuid()}.mp4`);
-    mergeConfig.outputPath = tmpOutput;
 
     try {
+      // Download all shot videos from MinIO to temp files for FFmpeg
+      for (const shot of mergeConfig.shots) {
+        const objectKey = shot.generationTask?.localPath;
+        if (!objectKey) throw new Error(`Shot ${shot.id} has no video key`);
+
+        const tmpVideo = path.join(tmpDir, `shot_${shot.order}_${uuid()}.mp4`);
+        await this.storageService.downloadFile(objectKey, tmpVideo);
+
+        // Point FFmpeg to the temp file
+        shot.generationTask!.localPath = tmpVideo;
+        tmpFiles.push(tmpVideo);
+      }
+
+      mergeConfig.outputPath = tmpOutput;
       await this.ffmpegService.merge(mergeConfig);
 
-      // Upload to MinIO
+      // Upload merged result to MinIO
       const objectKey = `projects/${id}/final.mp4`;
       await this.storageService.uploadFile(tmpOutput, objectKey);
-
-      // Update project with final video key
       await this.projectService.updateFinalVideoKey(id, objectKey);
-
       await this.projectService.updateStatus(id, 'completed');
 
       const presignedUrl = await this.storageService.getPresignedUrl(objectKey);
       return { ok: true, url: presignedUrl };
     } catch (error: any) {
-      // Clean up temp file on error
       await fs.unlink(tmpOutput).catch(() => {});
+      for (const f of tmpFiles) await fs.unlink(f).catch(() => {});
       await this.projectService.updateStatus(id, 'ready_to_merge');
       throw error;
     }

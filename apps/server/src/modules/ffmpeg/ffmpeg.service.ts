@@ -40,7 +40,7 @@ export class FFmpegService {
     }
 
     const [width, height] = resolution.split('x').map(Number);
-    const args = this.buildFilterComplex(shots, edges, bgmPath, bgmVolume, originalVolume);
+    const args = this.buildFilterComplex(shots, edges, resolution, bgmPath, bgmVolume, originalVolume);
 
     const cmdArgs = [
       ...this.buildInputArgs(shots, bgmPath),
@@ -129,6 +129,7 @@ export class FFmpegService {
   private buildFilterComplex(
     shots: Shot[],
     edges: Edge[],
+    resolution: string,
     bgmPath?: string,
     bgmVolume = 0.3,
     originalVolume = 1.0,
@@ -142,8 +143,16 @@ export class FFmpegService {
       return ['-filter_complex', filters.join(';')];
     }
 
+    // Normalize all video inputs to target resolution (xfade requires matching)
+    const [tw, th] = resolution.split('x').map(Number);
+    for (let i = 0; i < shots.length; i++) {
+      filters.push(
+        `[${i}:v]scale=${tw}:${th}:force_original_aspect_ratio=1,pad=${tw}:${th}:(ow-iw)/2:(oh-ih)/2,setsar=1[v${i}]`,
+      );
+    }
+
     // Build xfade chain for multiple clips
-    let prevLabel = '0:v';
+    let prevLabel = 'v0';
     let cumulativeOffset = 0;
 
     for (let i = 0; i < shots.length - 1; i++) {
@@ -160,7 +169,7 @@ export class FFmpegService {
 
       const xfade = this.buildXfade(
         prevLabel,
-        `${i + 1}:v`,
+        `v${i + 1}`,
         nextLabel,
         transType,
         transDuration,
