@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useState, useEffect, useRef } from 'react';
 import { Handle, Position, NodeProps } from '@xyflow/react';
 import {
   PlayCircleOutlined,
@@ -7,6 +7,8 @@ import {
   CloseCircleOutlined,
   ClockCircleOutlined,
 } from '@ant-design/icons';
+import MDEditor from '@uiw/react-md-editor';
+import { getShotVideoUrl } from '../../api/client';
 
 const statusIcons: Record<string, React.ReactNode> = {
   draft: <PlayCircleOutlined style={{ color: '#64748b', fontSize: 15 }} />,
@@ -28,6 +30,31 @@ function ShotNode({ data, selected }: NodeProps) {
   const status: string = data.status ?? 'draft';
   const progress: number = data.progress ?? 0;
   const base = statusStyle[status] ?? statusStyle.draft;
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [playing, setPlaying] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    if (status === 'completed' && data.shotId) {
+      getShotVideoUrl(data.shotId)
+        .then(setVideoUrl)
+        .catch(() => {});
+    } else {
+      setVideoUrl(null);
+      setPlaying(false);
+    }
+  }, [status, data.shotId]);
+
+  const handleVideoClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!videoRef.current) return;
+    if (playing) {
+      videoRef.current.pause();
+    } else {
+      videoRef.current.play();
+    }
+    setPlaying(!playing);
+  };
 
   return (
     <div
@@ -35,7 +62,7 @@ function ShotNode({ data, selected }: NodeProps) {
         padding: '12px 16px',
         borderRadius: 12,
         border: '2px solid transparent',
-        minWidth: 180,
+        minWidth: 200,
         background: '#131330',
         boxShadow: selected
           ? '0 0 0 2px rgba(79, 124, 255, 0.5), 0 4px 20px rgba(0,0,0,0.3)'
@@ -60,18 +87,66 @@ function ShotNode({ data, selected }: NodeProps) {
         <span style={{ fontSize: 11, fontWeight: 600, color: '#64748b' }}>#{data.order}</span>
         {statusIcons[status]}
       </div>
+
+      {/* Video thumbnail (click to play) */}
+      {videoUrl && (
+        <div
+          onClick={handleVideoClick}
+          style={{
+            position: 'relative',
+            borderRadius: 6,
+            overflow: 'hidden',
+            cursor: 'pointer',
+            marginBottom: 6,
+          }}
+        >
+          <video
+            ref={videoRef}
+            src={videoUrl}
+            muted
+            playsInline
+            style={{
+              width: '100%',
+              height: 70,
+              objectFit: 'cover',
+              display: 'block',
+              borderRadius: 6,
+            }}
+          />
+          {!playing && (
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'rgba(0,0,0,0.35)',
+                borderRadius: 6,
+              }}
+            >
+              <PlayCircleOutlined style={{ fontSize: 24, color: '#fff' }} />
+            </div>
+          )}
+        </div>
+      )}
+
       <div
         style={{
           fontSize: 13,
           lineHeight: 1.4,
           color: '#cbd5e1',
-          display: '-webkit-box',
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: 'vertical',
           overflow: 'hidden',
         }}
       >
-        {data.promptPreview || '空提示词'}
+        {data.promptPreview ? (
+          <MDEditor.Markdown
+            source={data.promptPreview}
+            style={{ fontSize: 13, background: 'transparent', color: '#cbd5e1' }}
+          />
+        ) : (
+          '空提示词'
+        )}
       </div>
       {status === 'generating' && (
         <div

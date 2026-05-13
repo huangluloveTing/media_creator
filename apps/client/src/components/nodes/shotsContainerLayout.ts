@@ -1,5 +1,5 @@
-export const CARD_WIDTH = 156;
-export const CARD_HEIGHT = 148;
+export const CARD_WIDTH = 180;
+export const CARD_HEIGHT = 240;
 export const ARROW_WIDTH = 72;
 export const CONNECTOR_WIDTH = 32;
 

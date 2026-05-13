@@ -1,4 +1,4 @@
-import { memo, Fragment } from 'react';
+import { memo, Fragment, useState, useEffect, useRef } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import { Button, Tag, Tooltip } from 'antd';
 import {
@@ -13,8 +13,9 @@ import {
   DeleteOutlined,
   CameraOutlined,
 } from '@ant-design/icons';
+import MDEditor from '@uiw/react-md-editor';
 import { useProject } from '../../context/ProjectContext';
-import { api } from '../../api/client';
+import { api, getShotVideoUrl } from '../../api/client';
 import type { Shot, EdgeData } from '../../types';
 import {
   CARD_WIDTH,
@@ -221,6 +222,31 @@ function ShotCard({
 }) {
   const status = shot.generation?.status ?? 'draft';
   const border = statusBorder[status] ?? '#1e1e4a';
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [playing, setPlaying] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    if (status === 'completed') {
+      getShotVideoUrl(shot.id)
+        .then(setVideoUrl)
+        .catch(() => {});
+    } else {
+      setVideoUrl(null);
+      setPlaying(false);
+    }
+  }, [status, shot.id]);
+
+  const handleVideoClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!videoRef.current) return;
+    if (playing) {
+      videoRef.current.pause();
+    } else {
+      videoRef.current.play();
+    }
+    setPlaying(!playing);
+  };
 
   return (
     <div
@@ -239,7 +265,7 @@ function ShotCard({
         cursor: 'pointer',
         display: 'flex',
         flexDirection: 'column',
-        gap: 6,
+        gap: 4,
         transition: 'all 0.15s',
         position: 'relative',
         overflow: 'hidden',
@@ -266,23 +292,77 @@ function ShotCard({
         <span style={{ fontSize: 14, lineHeight: 1 }}>{statusIcons[status]}</span>
       </div>
 
+      {/* Video thumbnail (click to play) */}
+      {videoUrl && (
+        <div
+          onClick={handleVideoClick}
+          style={{
+            position: 'relative',
+            borderRadius: 6,
+            overflow: 'hidden',
+            cursor: 'pointer',
+            flexShrink: 0,
+          }}
+        >
+          <video
+            ref={videoRef}
+            src={videoUrl}
+            muted
+            playsInline
+            style={{
+              width: '100%',
+              height: 70,
+              objectFit: 'cover',
+              display: 'block',
+              borderRadius: 6,
+            }}
+          />
+          {!playing && (
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'rgba(0,0,0,0.35)',
+                borderRadius: 6,
+              }}
+            >
+              <PlayCircleOutlined style={{ fontSize: 22, color: '#fff' }} />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Markdown prompt preview */}
       <div
         style={{
           flex: 1,
           fontSize: 12,
           lineHeight: 1.4,
-          color: '#cbd5e1',
-          display: '-webkit-box',
-          WebkitLineClamp: 3,
-          WebkitBoxOrient: 'vertical',
           overflow: 'hidden',
+          minHeight: 0,
         }}
       >
-        {shot.prompt.slice(0, 80) || <span style={{ color: '#475569' }}>空提示词</span>}
+        {shot.prompt ? (
+          <div style={{ maxHeight: '100%', overflow: 'hidden' }}>
+            <MDEditor.Markdown
+              source={shot.prompt}
+              style={{
+                fontSize: 12,
+                background: 'transparent',
+                color: '#cbd5e1',
+              }}
+            />
+          </div>
+        ) : (
+          <span style={{ color: '#475569' }}>空提示词</span>
+        )}
       </div>
 
       <div
-        style={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}
+        style={{ display: 'flex', justifyContent: 'space-between', gap: 2, flexShrink: 0 }}
         onClick={(e) => e.stopPropagation()}
       >
         <Tooltip title="左移">
