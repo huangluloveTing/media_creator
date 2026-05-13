@@ -1,5 +1,15 @@
 {
   "hooks": {
-    "PostToolUse": "pnpm format --loglevel error 2>/dev/null && pnpm lint"
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pnpm format --loglevel error 2>/dev/null && pnpm lint"
+          }
+        ]
+      }
+    ]
   }
 }
