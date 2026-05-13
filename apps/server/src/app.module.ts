@@ -9,6 +9,7 @@ import { FFmpegModule } from './modules/ffmpeg/ffmpeg.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { StorageModule } from './modules/storage/storage.module';
 import { LlmModule } from './modules/llm/llm.module';
+import { AuthModule } from './modules/auth/auth.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { LlmModule } from './modules/llm/llm.module';
     FFmpegModule,
     SettingsModule,
     LlmModule,
+    AuthModule,
   ],
 })
 export class AppModule {}

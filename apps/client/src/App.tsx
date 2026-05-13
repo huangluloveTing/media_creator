@@ -1,9 +1,13 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, Outlet } from 'react-router-dom';
 import { ConfigProvider, theme, App as AntApp } from 'antd';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { ProjectProvider } from './context/ProjectContext';
+import AppHeader from './components/AppHeader';
 import ProjectListPage from './pages/ProjectListPage';
 import ProjectEditorPage from './pages/ProjectEditorPage';
 import SettingsPage from './pages/SettingsPage';
+import LoginPage from './pages/LoginPage';
+import ChangePasswordPage from './pages/ChangePasswordPage';
 
 const customTheme = {
   algorithm: theme.darkAlgorithm,
@@ -49,23 +53,44 @@ const customTheme = {
   },
 };
 
+function ProtectedLayout() {
+  const { isAuthenticated } = useAuth();
+  const location = useLocation();
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+  return (
+    <>
+      <AppHeader />
+      <Outlet />
+    </>
+  );
+}
+
 export default function App() {
   return (
     <ConfigProvider theme={customTheme}>
       <AntApp>
         <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<ProjectListPage />} />
-            <Route
-              path="/project/:projectId"
-              element={
-                <ProjectProvider>
-                  <ProjectEditorPage />
-                </ProjectProvider>
-              }
-            />
-            <Route path="/settings" element={<SettingsPage />} />
-          </Routes>
+          <AuthProvider>
+            <Routes>
+              <Route path="/login" element={<LoginPage />} />
+              <Route element={<ProtectedLayout />}>
+                <Route path="/change-password" element={<ChangePasswordPage />} />
+                <Route path="/" element={<ProjectListPage />} />
+                <Route
+                  path="/project/:projectId"
+                  element={
+                    <ProjectProvider>
+                      <ProjectEditorPage />
+                    </ProjectProvider>
+                  }
+                />
+                <Route path="/settings" element={<SettingsPage />} />
+              </Route>
+            </Routes>
+          </AuthProvider>
         </BrowserRouter>
       </AntApp>
     </ConfigProvider>

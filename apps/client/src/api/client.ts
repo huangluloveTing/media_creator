@@ -9,28 +9,48 @@ import {
 
 const BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3001/api';
 
+function getToken(): string | null {
+  return localStorage.getItem('auth_token');
+}
+
+async function authFetch(url: string, options?: RequestInit): Promise<Response> {
+  const token = getToken();
+  return fetch(url, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(options?.headers ?? {}),
+    },
+  });
+}
+
 /**
  * Fetch a presigned URL for a shot's generated video.
  * Call once and use the returned URL as <video src>.
  */
 export async function getShotVideoUrl(shotId: string): Promise<string> {
-  const res = await fetch(`${BASE}/shots/${shotId}/video`);
+  const res = await authFetch(`${BASE}/shots/${shotId}/video`);
   if (!res.ok) throw new Error('Video not ready');
   const data = await res.json();
   return data.url;
 }
 
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}${url}`, {
+  const res = await authFetch(`${BASE}${url}`, {
     cache: 'no-store',
     ...options,
     headers: {
-      'Content-Type': 'application/json',
       'Cache-Control': 'no-cache',
       Pragma: 'no-cache',
       ...(options?.headers ?? {}),
     },
   });
+  if (res.status === 401) {
+    localStorage.removeItem('auth_token');
+    window.location.href = '/login';
+    throw new Error('Unauthorized');
+  }
   if (res.status === 304) return undefined as T;
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
@@ -41,12 +61,29 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  // Auth
+  login: (username: string, password: string) =>
+    request<{ token: string }>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ username, password }),
+    }),
+  register: (username: string, password: string) =>
+    request<{ token: string }>('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ username, password }),
+    }),
+  changePassword: (oldPassword: string, newPassword: string) =>
+    request<{ ok: boolean }>('/auth/password', {
+      method: 'PUT',
+      body: JSON.stringify({ oldPassword, newPassword }),
+    }),
+
   // Projects
   getProjects: () => request<Project[]>('/projects'),
   getProject: (id: string) => request<Project>(`/projects/${id}`),
   getProjectFull: (id: string) => request<ProjectFull>(`/projects/${id}/full`),
-  createProject: (title: string) =>
-    request<Project>('/projects', { method: 'POST', body: JSON.stringify({ title }) }),
+  createProject: (data: { title: string; resolution?: string; fps?: number; defaultTransitionType?: string; globalStylePrompt?: string }) =>
+    request<Project>('/projects', { method: 'POST', body: JSON.stringify(data) }),
   updateProject: (id: string, data: Partial<Project>) =>
     request<Project>(`/projects/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteProject: (id: string) => request<void>(`/projects/${id}`, { method: 'DELETE' }),
