@@ -35,7 +35,9 @@ export class SettingsService {
     for (const item of items) {
       let setting = await this.repo.findOne({ where: { key: item.key } });
       if (!setting) {
-        setting = this.repo.create({ key: item.key, value: item.value });
+        const prefix = item.key.split('.')[0];
+        const provider = prefix === 'seedance' || prefix === 'llm' ? prefix : 'general';
+        setting = this.repo.create({ key: item.key, value: item.value, provider });
       } else {
         setting.value = item.value;
       }

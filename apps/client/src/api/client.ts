@@ -82,6 +82,19 @@ export const api = {
   getFinalVideoUrl: (projectId: string) =>
     request<{ url: string }>(`/projects/${projectId}/final-video`),
 
+  // LLM
+  enhancePrompt: (params: {
+    prompt: string;
+    shotSize?: string;
+    angle?: string;
+    movement?: string;
+    duration?: number;
+  }) =>
+    request<{ result: string }>('/llm/enhance-prompt', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    }),
+
   // Settings
   getSettings: () => request<Setting[]>('/settings'),
   getSettingsByProvider: (provider: string) => request<Setting[]>(`/settings/${provider}`),

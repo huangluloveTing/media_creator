@@ -40,10 +40,19 @@ export default function MergeProperties() {
       const controller = new AbortController();
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setLoadingVideo(true);
-      api.getFinalVideoUrl(projectId!).then(
-        (result) => { if (!controller.signal.aborted) setVideoUrl(result.url); },
-        () => { if (!controller.signal.aborted) setVideoUrl(null); },
-      ).finally(() => { if (!controller.signal.aborted) setLoadingVideo(false); });
+      api
+        .getFinalVideoUrl(projectId!)
+        .then(
+          (result) => {
+            if (!controller.signal.aborted) setVideoUrl(result.url);
+          },
+          () => {
+            if (!controller.signal.aborted) setVideoUrl(null);
+          },
+        )
+        .finally(() => {
+          if (!controller.signal.aborted) setLoadingVideo(false);
+        });
       return () => controller.abort();
     } else {
       setVideoUrl(null);

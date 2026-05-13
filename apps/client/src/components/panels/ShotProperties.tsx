@@ -5,6 +5,7 @@ import {
   ThunderboltOutlined,
   ReloadOutlined,
   CheckCircleOutlined,
+  HighlightOutlined,
 } from '@ant-design/icons';
 import { useProject } from '../../context/ProjectContext';
 import { api, getShotVideoUrl } from '../../api/client';
@@ -66,6 +67,7 @@ export default function ShotProperties({ shotId }: { shotId: string }) {
   const shot = state.project?.shots.find((s) => s.id === shotId);
   const [localPrompt, setLocalPrompt] = useState(shot?.prompt ?? '');
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [enhancing, setEnhancing] = useState(false);
 
   useEffect(() => {
     setLocalPrompt(shot?.prompt ?? '');
@@ -123,6 +125,26 @@ export default function ShotProperties({ shotId }: { shotId: string }) {
     }
   };
 
+  const handleEnhance = async () => {
+    if (!localPrompt.trim()) return;
+    setEnhancing(true);
+    try {
+      const { result } = await api.enhancePrompt({
+        prompt: localPrompt,
+        shotSize: shot.shotSize,
+        angle: shot.angle,
+        movement: shot.movement,
+        duration: shot.duration,
+      });
+      setLocalPrompt(result);
+      message.success('提示词已优化');
+    } catch (e: any) {
+      message.error(e.message);
+    } finally {
+      setEnhancing(false);
+    }
+  };
+
   const handleRetry = async () => {
     try {
       const task = await api.generateShot(shotId);
@@ -176,7 +198,26 @@ export default function ShotProperties({ shotId }: { shotId: string }) {
           placeholder="描述镜头内容..."
           rows={4}
           style={{ ...formStyle, background: '#131330', borderColor: '#1e1e4a' }}
+          disabled={enhancing}
         />
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6 }}>
+          <Button
+            size="small"
+            icon={<HighlightOutlined />}
+            loading={enhancing}
+            disabled={!localPrompt.trim()}
+            onClick={handleEnhance}
+            style={{
+              background: enhancing ? undefined : 'rgba(167, 139, 250, 0.1)',
+              borderColor: enhancing ? undefined : '#a78bfa44',
+              color: enhancing ? undefined : '#a78bfa',
+              borderRadius: 6,
+              fontSize: 12,
+            }}
+          >
+            AI 优化
+          </Button>
+        </div>
       </Label>
 
       {/* Camera */}

@@ -8,6 +8,7 @@ import { SeedanceModule } from './modules/seedance/seedance.module';
 import { FFmpegModule } from './modules/ffmpeg/ffmpeg.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { StorageModule } from './modules/storage/storage.module';
+import { LlmModule } from './modules/llm/llm.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { StorageModule } from './modules/storage/storage.module';
     SeedanceModule,
     FFmpegModule,
     SettingsModule,
+    LlmModule,
   ],
 })
 export class AppModule {}
