@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react';
-import { Input, Select, InputNumber, Button, Typography, Tag, message, Progress } from 'antd';
+import { Select, InputNumber, Button, Typography, Tag, message, Progress, Modal } from 'antd';
 import {
   CameraOutlined,
   ThunderboltOutlined,
   ReloadOutlined,
   CheckCircleOutlined,
   HighlightOutlined,
+  FullscreenOutlined,
 } from '@ant-design/icons';
 import { useProject } from '../../context/ProjectContext';
 import { api, getShotVideoUrl } from '../../api/client';
+import MarkdownEditor from '../../components/MarkdownEditor';
 
 const { Text, Title } = Typography;
 
@@ -68,6 +70,8 @@ export default function ShotProperties({ shotId }: { shotId: string }) {
   const [localPrompt, setLocalPrompt] = useState(shot?.prompt ?? '');
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [enhancing, setEnhancing] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalDraft, setModalDraft] = useState('');
 
   useEffect(() => {
     setLocalPrompt(shot?.prompt ?? '');
@@ -191,16 +195,33 @@ export default function ShotProperties({ shotId }: { shotId: string }) {
 
       {/* Prompt */}
       <Label text="提示词">
-        <Input.TextArea
+        <MarkdownEditor
           value={localPrompt}
-          onChange={(e) => setLocalPrompt(e.target.value)}
+          onChange={setLocalPrompt}
           onBlur={() => update('prompt', localPrompt)}
-          placeholder="描述镜头内容..."
-          rows={4}
-          style={{ ...formStyle, background: '#131330', borderColor: '#1e1e4a' }}
+          minHeight={140}
           disabled={enhancing}
+          placeholder="描述镜头内容..."
         />
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6 }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 6, marginTop: 6 }}>
+          <Button
+            size="small"
+            icon={<FullscreenOutlined />}
+            disabled={!localPrompt}
+            onClick={() => {
+              setModalDraft(localPrompt);
+              setModalOpen(true);
+            }}
+            style={{
+              background: 'rgba(79, 124, 255, 0.1)',
+              borderColor: '#4f7cff44',
+              color: '#4f7cff',
+              borderRadius: 6,
+              fontSize: 12,
+            }}
+          >
+            放大编辑
+          </Button>
           <Button
             size="small"
             icon={<HighlightOutlined />}
@@ -219,6 +240,21 @@ export default function ShotProperties({ shotId }: { shotId: string }) {
           </Button>
         </div>
       </Label>
+
+      {/* Fullscreen editor modal */}
+      <Modal
+        title="编辑提示词"
+        open={modalOpen}
+        onOk={() => {
+          setLocalPrompt(modalDraft);
+          setModalOpen(false);
+        }}
+        onCancel={() => setModalOpen(false)}
+        width="90vw"
+        styles={{ body: { padding: '12px 16px' } }}
+      >
+        <MarkdownEditor value={modalDraft} onChange={setModalDraft} minHeight={400} showToolbar />
+      </Modal>
 
       {/* Camera */}
       <fieldset

@@ -1,7 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, Input, Button, Space, Typography, message, Spin } from 'antd';
-import { SettingOutlined, ArrowLeftOutlined, ApiOutlined, CloudOutlined, ThunderboltOutlined } from '@ant-design/icons';
+import {
+  SettingOutlined,
+  ArrowLeftOutlined,
+  ApiOutlined,
+  CloudOutlined,
+  ThunderboltOutlined,
+} from '@ant-design/icons';
 import { api } from '../api/client';
 import type { Setting } from '../types';
 
@@ -42,7 +48,9 @@ export default function SettingsPage() {
     if (!seedanceEditing) return;
     setSaving(true);
     try {
-      const [updated] = await api.updateSettings([{ key: SEEDANCE_API_KEY, value: seedanceEditing }]);
+      const [updated] = await api.updateSettings([
+        { key: SEEDANCE_API_KEY, value: seedanceEditing },
+      ]);
       setSettings((prev) =>
         updated
           ? prev.map((s) => (s.key === SEEDANCE_API_KEY ? updated : s))
