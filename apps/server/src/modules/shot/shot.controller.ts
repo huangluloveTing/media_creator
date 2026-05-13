@@ -8,17 +8,14 @@ import {
   Param,
   HttpCode,
   HttpStatus,
-  Res,
   NotFoundException,
 } from '@nestjs/common';
-import type { Response } from 'express';
-import * as path from 'path';
-import * as fs from 'fs';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ShotService } from './shot.service';
 import { GenerationService } from '../seedance/generation.service';
 import { GenerationTask } from './entities/generation-task.entity';
+import { StorageService } from '../storage/storage.service';
 import { CreateShotDto } from './dto/create-shot.dto';
 import { UpdateShotDto } from './dto/update-shot.dto';
 import { ReorderShotDto } from './dto/reorder-shot.dto';
@@ -30,6 +27,7 @@ export class ShotController {
     private readonly generationService: GenerationService,
     @InjectRepository(GenerationTask)
     private readonly taskRepo: Repository<GenerationTask>,
+    private readonly storageService: StorageService,
   ) {}
 
   @Post()
@@ -59,17 +57,13 @@ export class ShotController {
   }
 
   @Get(':id/video')
-  async streamVideo(@Param('id') shotId: string, @Res() res: Response) {
+  async getShotVideo(@Param('id') shotId: string) {
     const task = await this.taskRepo.findOne({ where: { shotId } });
     if (!task?.localPath) {
       throw new NotFoundException('Video not ready for this shot');
     }
-    const absolutePath = path.resolve(task.localPath);
-    if (!fs.existsSync(absolutePath)) {
-      throw new NotFoundException('Video file missing on disk');
-    }
-    res.setHeader('Content-Type', 'video/mp4');
-    res.sendFile(absolutePath);
+    const url = await this.storageService.getPresignedUrl(task.localPath);
+    return { url };
   }
 
   @Delete(':id')

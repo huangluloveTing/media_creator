@@ -8,6 +8,7 @@ import { UpdateProjectDto } from './dto/update-project.dto';
 import { Shot } from '../shot/entities/shot.entity';
 import { Edge } from '../shot/entities/edge.entity';
 import { GenerationTask } from '../shot/entities/generation-task.entity';
+import { MergeConfig } from '../ffmpeg/ffmpeg.service';
 
 @Injectable()
 export class ProjectService {
@@ -102,6 +103,32 @@ export class ProjectService {
     };
   }
 
+  async findMergeData(id: string): Promise<MergeConfig> {
+    const project = await this.findOne(id);
+
+    const shots = await this.projectRepo.manager.find(Shot, {
+      where: { projectId: id },
+      order: { order: 'ASC' },
+      relations: ['generationTask'],
+    });
+
+    const edges = await this.projectRepo.manager.find(Edge, {
+      where: { projectId: id },
+      order: { position: 'ASC' },
+    });
+
+    return {
+      shots,
+      edges,
+      bgmPath: project.bgmPath ?? undefined,
+      bgmVolume: project.bgmVolume ?? 0.3,
+      originalVolume: project.originalVolume ?? 1.0,
+      outputPath: `${project.outputDir ?? './output'}/${project.title}_final.mp4`,
+      resolution: project.resolution ?? '1920x1080',
+      fps: project.fps ?? 24,
+    };
+  }
+
   async update(id: string, dto: UpdateProjectDto): Promise<Project> {
     const project = await this.findOne(id);
     Object.assign(project, dto);
@@ -111,6 +138,12 @@ export class ProjectService {
   async remove(id: string): Promise<void> {
     const project = await this.findOne(id);
     await this.projectRepo.remove(project);
+  }
+
+  async updateFinalVideoKey(id: string, finalVideoKey: string): Promise<Project> {
+    const project = await this.findOne(id);
+    project.finalVideoKey = finalVideoKey;
+    return this.projectRepo.save(project);
   }
 
   async updateStatus(id: string, status: ProjectStatus): Promise<Project> {

@@ -45,6 +45,9 @@ export class Project {
   @Column({ length: 500, nullable: true, name: 'bgm_path' })
   bgmPath: string;
 
+  @Column({ length: 500, nullable: true, name: 'final_video_key' })
+  finalVideoKey!: string;
+
   @Column({
     length: 30,
     default: 'draft',

@@ -8,6 +8,7 @@ import {
   BackgroundVariant,
   useNodesState,
   useEdgesState,
+  useReactFlow,
   Connection,
   MarkerType,
   NodeTypes,
@@ -94,6 +95,7 @@ function hydrateFlow(project: ProjectFull): { nodes: Node[]; edges: Edge[] } {
 
 export default function FlowEditor() {
   const { state, dispatch } = useProject();
+  const { fitView } = useReactFlow();
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
@@ -104,6 +106,12 @@ export default function FlowEditor() {
       setEdges(hydratedEdges);
     }
   }, [state.project, setNodes, setEdges]);
+
+  // Auto-fit viewport when shot count changes
+  useEffect(() => {
+    // Wait for nodes to render before fitting
+    requestAnimationFrame(() => fitView({ padding: 0.2, duration: 200 }));
+  }, [state.project?.shots.length, state.project?.id, fitView]);
 
   const onNodeClick = useCallback(
     (_: React.MouseEvent, node: Node) => {
@@ -134,7 +142,6 @@ export default function FlowEditor() {
         onConnect={onConnect}
         onPaneClick={onPaneClick}
         nodeTypes={nodeTypes}
-        fitView
         deleteKeyCode={null}
         snapToGrid
         snapGrid={[20, 20]}

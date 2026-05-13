@@ -60,10 +60,18 @@ export default function ShotProperties({ shotId }: { shotId: string }) {
   const { state, dispatch } = useProject();
   const shot = state.project?.shots.find((s) => s.id === shotId);
   const [localPrompt, setLocalPrompt] = useState(shot?.prompt ?? '');
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
 
   useEffect(() => {
     setLocalPrompt(shot?.prompt ?? '');
   }, [shot?.prompt]);
+
+  // Fetch presigned URL when generation completes
+  useEffect(() => {
+    if (shot?.generation?.status === 'completed') {
+      getShotVideoUrl(shotId).then(setVideoUrl).catch(() => setVideoUrl(null));
+    }
+  }, [shot?.generation?.status, shotId]);
 
   if (!shot) return null;
 
@@ -227,10 +235,11 @@ export default function ShotProperties({ shotId }: { shotId: string }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#34d399', fontSize: 13 }}>
             <CheckCircleOutlined /> 生成完成
           </div>
+          {videoUrl ? (
           <video
             key={shot.generation?.id}
             controls
-            src={getShotVideoUrl(shotId)}
+            src={videoUrl}
             style={{
               width: '100%',
               borderRadius: 8,
@@ -238,6 +247,11 @@ export default function ShotProperties({ shotId }: { shotId: string }) {
               border: '1px solid #1e1e4a',
             }}
           />
+          ) : (
+          <div style={{ color: '#64748b', fontSize: 12, textAlign: 'center', padding: 12 }}>
+            获取视频地址中...
+          </div>
+          )}
           <Button
             block
             icon={<ReloadOutlined />}

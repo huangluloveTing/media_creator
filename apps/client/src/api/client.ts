@@ -2,8 +2,15 @@ import { type Project, type ProjectFull, type Setting, type Shot, type EdgeData,
 
 const BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3001/api';
 
-export function getShotVideoUrl(shotId: string): string {
-  return `${BASE}/shots/${shotId}/video`;
+/**
+ * Fetch a presigned URL for a shot's generated video.
+ * Call once and use the returned URL as <video src>.
+ */
+export async function getShotVideoUrl(shotId: string): Promise<string> {
+  const res = await fetch(`${BASE}/shots/${shotId}/video`);
+  if (!res.ok) throw new Error('Video not ready');
+  const data = await res.json();
+  return data.url;
 }
 
 async function request<T>(url: string, options?: RequestInit): Promise<T> {

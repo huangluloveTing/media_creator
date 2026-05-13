@@ -9,7 +9,9 @@ import { GenerationTask } from '../shot/entities/generation-task.entity';
 import type { TaskStatus } from '@media-creator/shared';
 import { SeedanceService } from './seedance.service';
 import { ProjectService } from '../project/project.service';
+import { StorageService } from '../storage/storage.service';
 import * as path from 'path';
+import * as fs from 'fs/promises';
 
 const POLL_INTERVAL_MS = 3000;
 
@@ -34,6 +36,7 @@ export class GenerationWorker extends WorkerHost {
     private readonly taskRepo: Repository<GenerationTask>,
     private readonly seedanceService: SeedanceService,
     private readonly config: ConfigService,
+    private readonly storageService: StorageService,
     @Inject(forwardRef(() => ProjectService))
     private readonly projectService: ProjectService,
   ) {
@@ -152,12 +155,6 @@ export class GenerationWorker extends WorkerHost {
         try {
           await this.persistVideo(shot, task, result.videoUrl);
           task.status = 'completed';
-          task.localPath = path.join(
-            this.config.get<string>('OUTPUT_DIR', './output'),
-            shot.projectId,
-            'shots',
-            `${shot.order}.mp4`,
-          );
           await this.taskRepo.save(task);
           this.emitAndRecalculate(shot.projectId, shot.id, 'completed', 100);
         } catch (err: any) {
@@ -183,17 +180,34 @@ export class GenerationWorker extends WorkerHost {
   }
 
   private async persistVideo(shot: Shot, task: GenerationTask, videoUrl: string): Promise<void> {
-    const outputDir = this.config.get<string>('OUTPUT_DIR', './output');
-    const shotPath = path.join(outputDir, shot.projectId, 'shots', `${shot.order}.mp4`);
-    await this.seedanceService.downloadAndSave(videoUrl, shotPath);
-    task.localPath = shotPath;
+    const tmpDir = this.config.get<string>('OUTPUT_DIR', './tmp');
+    await fs.mkdir(tmpDir, { recursive: true });
 
-    const framePath = path.join(outputDir, shot.projectId, 'shots', `${shot.order}_lastframe.png`);
+    // Download to temp file
+    const tmpPath = path.join(tmpDir, `${shot.id}.mp4`);
+    await this.seedanceService.downloadAndSave(videoUrl, tmpPath);
+
+    // Extract last frame from temp file
+    const frameTmpPath = path.join(tmpDir, `${shot.id}_lastframe.png`);
     try {
-      await this.seedanceService.extractLastFrame(shotPath, framePath);
-      task.lastFramePath = framePath;
+      await this.seedanceService.extractLastFrame(tmpPath, frameTmpPath);
     } catch (err: any) {
       this.logger.warn(`Last frame extraction failed for shot ${shot.id}: ${err.message}`);
+    }
+
+    // Upload to MinIO
+    const objectKey = `projects/${shot.projectId}/shots/${shot.order}.mp4`;
+    await this.storageService.uploadFile(tmpPath, objectKey);
+    task.localPath = objectKey;
+
+    // Upload last frame if extracted
+    try {
+      await fs.access(frameTmpPath);
+      const frameKey = `projects/${shot.projectId}/shots/${shot.order}_lastframe.png`;
+      await this.storageService.uploadFile(frameTmpPath, frameKey);
+      task.lastFramePath = frameKey;
+    } catch {
+      // Frame file doesn't exist, skip
     }
   }
 

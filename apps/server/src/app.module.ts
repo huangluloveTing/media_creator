@@ -7,6 +7,7 @@ import { ShotModule } from './modules/shot/shot.module';
 import { SeedanceModule } from './modules/seedance/seedance.module';
 import { FFmpegModule } from './modules/ffmpeg/ffmpeg.module';
 import { SettingsModule } from './modules/settings/settings.module';
+import { StorageModule } from './modules/storage/storage.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { SettingsModule } from './modules/settings/settings.module';
         },
       }),
     }),
+    StorageModule,
     ProjectModule,
     ShotModule,
     SeedanceModule,

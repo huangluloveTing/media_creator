@@ -12,6 +12,7 @@ export interface Project {
   bgmVolume: number;
   originalVolume: number;
   bgmPath: string | null;
+  finalVideoKey: string | null;
   status: ProjectStatus;
   createdAt: string;
   updatedAt: string;
