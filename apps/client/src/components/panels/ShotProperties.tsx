@@ -261,7 +261,6 @@ export default function ShotProperties({ shotId }: { shotId: string }) {
       <Collapse
         key={shotId}
         ghost
-        defaultActiveKey={['camera', 'model', 'transition']}
         style={{ background: 'transparent' }}
         expandIcon={({ isActive }) => (
           <CaretRightOutlined
