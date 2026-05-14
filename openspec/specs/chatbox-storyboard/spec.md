@@ -1,17 +1,27 @@
-## ADDED Requirements
+## MODIFIED Requirements
 
 ### Requirement: 视频编辑页左侧支持聊天驱动分镜
-系统 SHALL 在项目编辑页将左侧面板替换为聊天面板，允许用户通过自然语言多轮迭代生成分镜草案。
+系统 SHALL 在项目编辑页将左侧面板替换为聊天面板，允许用户通过自然语言多轮迭代生成分镜草案，并为长文本交互提供更宽的可读区域。
 
 #### Scenario: 用户发起首轮分镜生成
 - **WHEN** 用户输入分镜需求并发送
-- **THEN** 系统调用 `POST /llm/storyboard/draft` 生成草案版本 `v1`
+- **THEN** 系统调用 `POST /llm/storyboard/draft` 或流式端点生成草案版本 `v1`
 - **AND** 在聊天区域展示草案摘要（镜头数、总时长）
 
 #### Scenario: 用户多轮迭代修改分镜
 - **WHEN** 用户在已有草案基础上继续发送修改指令
 - **THEN** 系统基于当前草案生成下一版本 `vN+1`
 - **AND** 展示本轮变更摘要（diff）
+
+#### Scenario: 聊天面板宽度增强
+- **WHEN** 用户进入视频编辑页并使用分镜 chatbox
+- **THEN** 系统 SHALL 使用更宽的左侧聊天面板以支持更长对话和更多反馈信息
+- **AND** 不影响分镜应用与画布更新流程
+
+#### Scenario: 对话内容持续展示
+- **WHEN** 用户在分镜生成过程中收到阶段更新、token 流和完成结果
+- **THEN** 系统 SHALL 保留并持续展示历史对话消息
+- **AND** 阶段状态或中间事件不得覆盖已产生的用户与助手对话内容
 
 ### Requirement: 分镜草案必须满足强约束 schema
 系统 SHALL 对 LLM 返回的分镜草案执行严格 schema 校验，不符合约束时拒绝入库。
