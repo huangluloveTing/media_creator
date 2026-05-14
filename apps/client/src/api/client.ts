@@ -82,8 +82,13 @@ export const api = {
   getProjects: () => request<Project[]>('/projects'),
   getProject: (id: string) => request<Project>(`/projects/${id}`),
   getProjectFull: (id: string) => request<ProjectFull>(`/projects/${id}/full`),
-  createProject: (data: { title: string; resolution?: string; fps?: number; defaultTransitionType?: string; globalStylePrompt?: string }) =>
-    request<Project>('/projects', { method: 'POST', body: JSON.stringify(data) }),
+  createProject: (data: {
+    title: string;
+    resolution?: string;
+    fps?: number;
+    defaultTransitionType?: string;
+    globalStylePrompt?: string;
+  }) => request<Project>('/projects', { method: 'POST', body: JSON.stringify(data) }),
   updateProject: (id: string, data: Partial<Project>) =>
     request<Project>(`/projects/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteProject: (id: string) => request<void>(`/projects/${id}`, { method: 'DELETE' }),

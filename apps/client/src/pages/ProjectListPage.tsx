@@ -1,7 +1,27 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, Button, Typography, Tag, Space, Spin, Empty, Popconfirm, message, Modal, Form, Input, Select } from 'antd';
-import { PlusOutlined, DeleteOutlined, LoadingOutlined, ClockCircleOutlined, CameraOutlined } from '@ant-design/icons';
+import {
+  Card,
+  Button,
+  Typography,
+  Tag,
+  Space,
+  Spin,
+  Empty,
+  Popconfirm,
+  message,
+  Modal,
+  Form,
+  Input,
+  Select,
+} from 'antd';
+import {
+  PlusOutlined,
+  DeleteOutlined,
+  LoadingOutlined,
+  ClockCircleOutlined,
+  CameraOutlined,
+} from '@ant-design/icons';
 import { api } from '../api/client';
 import type { Project } from '../types';
 
@@ -40,7 +60,10 @@ export default function ProjectListPage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    api.getProjects().then(setProjects).finally(() => setLoading(false));
+    api
+      .getProjects()
+      .then(setProjects)
+      .finally(() => setLoading(false));
   }, []);
 
   const handleCreate = async () => {
@@ -165,14 +188,23 @@ export default function ProjectListPage() {
                       gap: 10,
                     }}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'flex-start',
+                      }}
+                    >
                       <Text strong style={{ color: '#e2e8f0', fontSize: 15, flex: 1 }}>
                         {p.title}
                       </Text>
                       <Popconfirm
                         title="确定删除？"
                         description="所有镜头和视频将被移除。"
-                        onConfirm={(e) => { e?.stopPropagation(); handleDelete(p.id); }}
+                        onConfirm={(e) => {
+                          e?.stopPropagation();
+                          handleDelete(p.id);
+                        }}
                         onCancel={(e) => e?.stopPropagation()}
                         onPopupClick={(e) => e.stopPropagation()}
                         okText="删除"
@@ -216,15 +248,26 @@ export default function ProjectListPage() {
         title="创建项目"
         open={modalOpen}
         onOk={handleCreate}
-        onCancel={() => { form.resetFields(); setModalOpen(false); }}
+        onCancel={() => {
+          form.resetFields();
+          setModalOpen(false);
+        }}
         confirmLoading={submitting}
         okText="创建"
         cancelText="取消"
         width={520}
         styles={{ body: { paddingTop: 20 } }}
       >
-        <Form form={form} layout="vertical" initialValues={{ resolution: '1920x1080', fps: 24, defaultTransitionType: 'dissolve' }}>
-          <Form.Item name="title" label="项目名称" rules={[{ required: true, message: '请输入项目名称' }]}>
+        <Form
+          form={form}
+          layout="vertical"
+          initialValues={{ resolution: '1920x1080', fps: 24, defaultTransitionType: 'dissolve' }}
+        >
+          <Form.Item
+            name="title"
+            label="项目名称"
+            rules={[{ required: true, message: '请输入项目名称' }]}
+          >
             <Input placeholder="输入项目名称" />
           </Form.Item>
           <Space size={16}>
@@ -232,11 +275,14 @@ export default function ProjectListPage() {
               <Select options={resolutionOptions} style={{ width: 210 }} />
             </Form.Item>
             <Form.Item name="fps" label="帧率">
-              <Select options={[
-                { value: 24, label: '24 fps' },
-                { value: 25, label: '25 fps' },
-                { value: 30, label: '30 fps' },
-              ]} style={{ width: 120 }} />
+              <Select
+                options={[
+                  { value: 24, label: '24 fps' },
+                  { value: 25, label: '25 fps' },
+                  { value: 30, label: '30 fps' },
+                ]}
+                style={{ width: 120 }}
+              />
             </Form.Item>
           </Space>
           <Form.Item name="defaultTransitionType" label="默认转场">

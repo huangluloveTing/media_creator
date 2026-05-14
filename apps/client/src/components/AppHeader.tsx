@@ -30,7 +30,10 @@ export default function AppHeader() {
         zIndex: 100,
       }}
     >
-      <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 10 }}>
+      <Link
+        to="/"
+        style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 10 }}
+      >
         <div
           style={{
             width: 32,
@@ -53,13 +56,20 @@ export default function AppHeader() {
         menu={{
           items: [
             { key: 'settings', icon: <SettingOutlined />, label: <Link to="/settings">设置</Link> },
-            { key: 'password', icon: <KeyOutlined />, label: <Link to="/change-password">修改密码</Link> },
+            {
+              key: 'password',
+              icon: <KeyOutlined />,
+              label: <Link to="/change-password">修改密码</Link>,
+            },
             { type: 'divider' },
             {
               key: 'logout',
               icon: <LogoutOutlined />,
               label: '退出登录',
-              onClick: () => { logout(); navigate('/login'); },
+              onClick: () => {
+                logout();
+                navigate('/login');
+              },
             },
           ],
         }}

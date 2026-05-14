@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Select, InputNumber, Button, Typography, Tag, message, Progress, Modal } from 'antd';
+import { Select, InputNumber, Button, Typography, Tag, message, Progress, Modal, Collapse } from 'antd';
 import {
   CameraOutlined,
   ThunderboltOutlined,
@@ -7,6 +7,7 @@ import {
   CheckCircleOutlined,
   HighlightOutlined,
   FullscreenOutlined,
+  CaretRightOutlined,
 } from '@ant-design/icons';
 import { useProject } from '../../context/ProjectContext';
 import { api, getShotVideoUrl } from '../../api/client';
@@ -256,128 +257,114 @@ export default function ShotProperties({ shotId }: { shotId: string }) {
         <MarkdownEditor value={modalDraft} onChange={setModalDraft} minHeight={400} showToolbar />
       </Modal>
 
-      {/* Camera */}
-      <fieldset
-        style={{ border: '1px solid #1e1e4a', borderRadius: 10, padding: '12px 16px', margin: 0 }}
-      >
-        <legend
-          style={{
-            color: '#64748b',
-            fontSize: 11,
-            fontWeight: 600,
-            letterSpacing: '0.05em',
-            textTransform: 'uppercase',
-            padding: '0 4px',
-          }}
-        >
-          镜头参数
-        </legend>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <Label text="景别">
-            <Select
-              value={shot.shotSize}
-              onChange={(v) => update('shotSize', v)}
-              style={formStyle}
-              options={shotSizeOptions}
-            />
-          </Label>
-          <Label text="角度">
-            <Select
-              value={shot.angle}
-              onChange={(v) => update('angle', v)}
-              style={formStyle}
-              options={angleOptions}
-            />
-          </Label>
-          <Label text="运动">
-            <Select
-              value={shot.movement}
-              onChange={(v) => update('movement', v)}
-              style={formStyle}
-              options={movementOptions}
-            />
-          </Label>
-          <Label text="时长 (秒)">
-            <InputNumber
-              value={shot.duration}
-              min={4}
-              max={15}
-              step={1}
-              onChange={(v) => update('duration', v ?? 5)}
-              style={formStyle}
-            />
-          </Label>
-        </div>
-      </fieldset>
-
-      {/* Model */}
-      <fieldset
-        style={{ border: '1px solid #1e1e4a', borderRadius: 10, padding: '12px 16px', margin: 0 }}
-      >
-        <legend
-          style={{
-            color: '#64748b',
-            fontSize: 11,
-            fontWeight: 600,
-            letterSpacing: '0.05em',
-            textTransform: 'uppercase',
-            padding: '0 4px',
-          }}
-        >
-          生成参数
-        </legend>
-        <Label text="模型">
-          <Select
-            value={shot.model}
-            onChange={(v) => update('model', v)}
-            style={formStyle}
-            options={modelOptions}
+      {/* Collapsible Settings */}
+      <Collapse
+        key={shotId}
+        ghost
+        defaultActiveKey={['camera', 'model', 'transition']}
+        style={{ background: 'transparent' }}
+        expandIcon={({ isActive }) => (
+          <CaretRightOutlined
+            rotate={isActive ? 90 : 0}
+            style={{ color: '#64748b', fontSize: 12 }}
           />
-        </Label>
-      </fieldset>
-
-      {/* Transition out */}
-      <fieldset
-        style={{ border: '1px solid #1e1e4a', borderRadius: 10, padding: '12px 16px', margin: 0 }}
-      >
-        <legend
-          style={{
-            color: '#64748b',
-            fontSize: 11,
-            fontWeight: 600,
-            letterSpacing: '0.05em',
-            textTransform: 'uppercase',
-            padding: '0 4px',
-          }}
-        >
-          转场到下一镜
-        </legend>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <Label text="转场类型">
-            <Select
-              value={outgoingEdge?.transitionType}
-              onChange={(v) => updateEdge('transitionType', v)}
-              style={formStyle}
-              options={transitionOptions}
-              disabled={!outgoingEdge}
-            />
-          </Label>
-          {outgoingEdge &&
-            outgoingEdge.transitionType !== 'cut' &&
-            outgoingEdge.transitionType !== 'none' && (
-              <Label text="时长 (秒)">
-                <InputNumber
-                  value={outgoingEdge.transitionDuration}
-                  min={0}
-                  max={5}
-                  step={0.1}
-                  onChange={(v) => updateEdge('transitionDuration', v ?? 0)}
+        )}
+        items={[
+          {
+            key: 'camera',
+            label: (
+              <span style={{ color: '#e2e8f0', fontSize: 13, fontWeight: 600 }}>镜头参数</span>
+            ),
+            children: (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <Label text="景别">
+                  <Select
+                    value={shot.shotSize}
+                    onChange={(v) => update('shotSize', v)}
+                    style={formStyle}
+                    options={shotSizeOptions}
+                  />
+                </Label>
+                <Label text="角度">
+                  <Select
+                    value={shot.angle}
+                    onChange={(v) => update('angle', v)}
+                    style={formStyle}
+                    options={angleOptions}
+                  />
+                </Label>
+                <Label text="运动">
+                  <Select
+                    value={shot.movement}
+                    onChange={(v) => update('movement', v)}
+                    style={formStyle}
+                    options={movementOptions}
+                  />
+                </Label>
+                <Label text="时长 (秒)">
+                  <InputNumber
+                    value={shot.duration}
+                    min={4}
+                    max={15}
+                    step={1}
+                    onChange={(v) => update('duration', v ?? 5)}
+                    style={formStyle}
+                  />
+                </Label>
+              </div>
+            ),
+          },
+          {
+            key: 'model',
+            label: (
+              <span style={{ color: '#e2e8f0', fontSize: 13, fontWeight: 600 }}>生成参数</span>
+            ),
+            children: (
+              <Label text="模型">
+                <Select
+                  value={shot.model}
+                  onChange={(v) => update('model', v)}
                   style={formStyle}
+                  options={modelOptions}
                 />
               </Label>
-            )}
-        </div>
-      </fieldset>
+            ),
+          },
+          {
+            key: 'transition',
+            label: (
+              <span style={{ color: '#e2e8f0', fontSize: 13, fontWeight: 600 }}>转场到下一镜</span>
+            ),
+            children: (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <Label text="转场类型">
+                  <Select
+                    value={outgoingEdge?.transitionType}
+                    onChange={(v) => updateEdge('transitionType', v)}
+                    style={formStyle}
+                    options={transitionOptions}
+                    disabled={!outgoingEdge}
+                  />
+                </Label>
+                {outgoingEdge &&
+                  outgoingEdge.transitionType !== 'cut' &&
+                  outgoingEdge.transitionType !== 'none' && (
+                    <Label text="时长 (秒)">
+                      <InputNumber
+                        value={outgoingEdge.transitionDuration}
+                        min={0}
+                        max={5}
+                        step={0.1}
+                        onChange={(v) => updateEdge('transitionDuration', v ?? 0)}
+                        style={formStyle}
+                      />
+                    </Label>
+                  )}
+              </div>
+            ),
+          },
+        ]}
+      />
 
       {/* Actions / Status / Preview */}
       {genStatus === 'completed' ? (

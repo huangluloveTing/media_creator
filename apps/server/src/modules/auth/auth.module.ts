@@ -22,11 +22,7 @@ import { User } from './user.entity';
     }),
   ],
   controllers: [AuthController],
-  providers: [
-    AuthService,
-    JwtStrategy,
-    { provide: APP_GUARD, useClass: JwtAuthGuard },
-  ],
+  providers: [AuthService, JwtStrategy, { provide: APP_GUARD, useClass: JwtAuthGuard }],
 })
 export class AuthModule implements OnModuleInit {
   constructor(private readonly authService: AuthService) {}
