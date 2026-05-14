@@ -8,7 +8,7 @@ import { api } from '../api/client';
 import { usePollGenerationStatus } from '../hooks/usePollGenerationStatus';
 import { useKeyboard } from '../hooks/useKeyboard';
 import FlowEditor from '../components/FlowEditor';
-import NodePalette from '../components/NodePalette';
+import ChatboxPanel from '../components/ChatboxPanel';
 import PropertiesPanel from '../components/panels/PropertiesPanel';
 
 const { Header } = Layout;
@@ -105,7 +105,7 @@ export default function ProjectEditorPage() {
           overflow: 'hidden',
         }}
       >
-        <NodePalette />
+        <ChatboxPanel />
         <ReactFlowProvider>
           <FlowEditor />
         </ReactFlowProvider>

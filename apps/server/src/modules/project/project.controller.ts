@@ -15,6 +15,7 @@ import { ProjectService } from './project.service';
 import { GenerationService } from '../seedance/generation.service';
 import { FFmpegService } from '../ffmpeg/ffmpeg.service';
 import { StorageService } from '../storage/storage.service';
+import { StoryboardService } from '../llm/storyboard.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import * as fs from 'fs/promises';
@@ -28,6 +29,7 @@ export class ProjectController {
     private readonly generationService: GenerationService,
     private readonly ffmpegService: FFmpegService,
     private readonly storageService: StorageService,
+    private readonly storyboardService: StoryboardService,
   ) {}
 
   @Post()
@@ -122,6 +124,22 @@ export class ProjectController {
     }
     const url = await this.storageService.getPresignedUrl(project.finalVideoKey);
     return { url };
+  }
+
+  @Get(':id/storyboard/drafts')
+  async getStoryboardDrafts(@Param('id') id: string) {
+    return this.storyboardService.listDrafts(id);
+  }
+
+  @Post(':id/storyboard/apply')
+  async applyStoryboard(
+    @Param('id') id: string,
+    @Body() body: { draftId?: string; mode?: 'replace_all' },
+  ) {
+    if (!body?.draftId) {
+      throw new BadRequestException('draftId is required');
+    }
+    return this.storyboardService.applyDraft(id, body.draftId, body.mode ?? 'replace_all');
   }
 
   @Put(':id')

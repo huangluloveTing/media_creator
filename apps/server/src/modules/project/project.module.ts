@@ -5,9 +5,15 @@ import { ProjectController } from './project.controller';
 import { ProjectService } from './project.service';
 import { SeedanceModule } from '../seedance/seedance.module';
 import { FFmpegModule } from '../ffmpeg/ffmpeg.module';
+import { LlmModule } from '../llm/llm.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Project]), forwardRef(() => SeedanceModule), FFmpegModule],
+  imports: [
+    TypeOrmModule.forFeature([Project]),
+    forwardRef(() => SeedanceModule),
+    forwardRef(() => LlmModule),
+    FFmpegModule,
+  ],
   controllers: [ProjectController],
   providers: [ProjectService],
   exports: [ProjectService],

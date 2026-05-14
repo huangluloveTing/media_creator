@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException, HttpException, HttpStatus } from '@nestjs/common';
 import OpenAI from 'openai';
 import { SettingsService } from '../settings/settings.service';
+import type { StoryboardPayload } from './storyboard.schema';
 
 interface CameraConfig {
   shotSize: string;
@@ -50,6 +51,24 @@ const SYSTEM_PROMPT = `你是一位顶级电影分镜师和视觉叙事专家。
    - ### 运镜说明 — 具体说明本镜头的景别、角度、运动方式及其叙事意图
 3. 语言风格：专业、精炼、富有画面感
 4. 只输出 Markdown 内容，无需前缀解释`;
+
+const STORYBOARD_SYSTEM_PROMPT = `你是分镜规划助手。你必须只返回 JSON，且严格符合给定 schema。
+硬性约束：
+1) shots 数量必须在 1..5
+2) duration 必须在 1..12
+3) order 必须从 0 开始连续递增
+4) 只允许 schema 中存在的字段
+5) 不允许 markdown、注释、解释文本
+`;
+const STORYBOARD_DIRECTOR_PROMPT = `你同时扮演两种角色：
+1) 视频脚本专家：负责剧情目标、节奏推进、情绪弧线
+2) 分镜导演：负责镜头语言、角色一致性、画面连贯
+
+要求：
+- 优先保证角色形象一致（发型、服饰、年龄感、关键外观特征）
+- 如用户要求与既有角色设定冲突，先在 clarification 中指出冲突
+- 先思考脚本意图，再产出镜头
+`;
 
 @Injectable()
 export class LlmService {
@@ -116,5 +135,142 @@ ${prompt}`;
         error.status || HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+  }
+
+  async draftStoryboard(params: {
+    instruction: string;
+    baseDraft?: StoryboardPayload;
+    characterProfile?: Record<string, unknown>;
+    mode?: 'fast' | 'detailed';
+  }): Promise<string> {
+    const { openai, model } = await this.getStoryboardClient();
+    const userMessage = this.buildStoryboardUserMessage(params);
+
+    try {
+      const completion = await openai.chat.completions.create({
+        model,
+        messages: [
+          { role: 'system', content: `${STORYBOARD_SYSTEM_PROMPT}\n${STORYBOARD_DIRECTOR_PROMPT}` },
+          { role: 'user', content: userMessage },
+        ],
+        temperature: 0.3,
+        max_tokens: 1200,
+      });
+
+      const result = completion.choices[0]?.message?.content?.trim();
+      if (!result) {
+        throw new HttpException('LLM returned empty response', HttpStatus.INTERNAL_SERVER_ERROR);
+      }
+      return result;
+    } catch (error: any) {
+      if (error instanceof HttpException || error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new HttpException(
+        error.message || 'Failed to draft storyboard',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async draftStoryboardStream(
+    params: {
+      instruction: string;
+      baseDraft?: StoryboardPayload;
+      characterProfile?: Record<string, unknown>;
+      mode?: 'fast' | 'detailed';
+    },
+    onToken: (chunk: string) => void,
+  ): Promise<string> {
+    const { openai, model } = await this.getStoryboardClient();
+    const userMessage = this.buildStoryboardUserMessage(params);
+    let fullText = '';
+
+    try {
+      const stream = await openai.chat.completions.create({
+        model,
+        messages: [
+          { role: 'system', content: `${STORYBOARD_SYSTEM_PROMPT}\n${STORYBOARD_DIRECTOR_PROMPT}` },
+          { role: 'user', content: userMessage },
+        ],
+        temperature: 0.3,
+        max_tokens: 1200,
+        stream: true,
+      });
+
+      for await (const chunk of stream) {
+        const delta = chunk.choices[0]?.delta?.content ?? '';
+        if (!delta) continue;
+        fullText += delta;
+        onToken(delta);
+      }
+
+      if (!fullText.trim()) {
+        throw new HttpException('LLM returned empty response', HttpStatus.INTERNAL_SERVER_ERROR);
+      }
+      return fullText.trim();
+    } catch (error: any) {
+      if (error instanceof HttpException || error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new HttpException(
+        error.message || 'Failed to draft storyboard',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  private async getStoryboardClient(): Promise<{ openai: OpenAI; model: string }> {
+    const [apiKey, model, baseUrl] = await Promise.all([
+      this.settings.getRaw('llm.apiKey'),
+      this.settings.getRaw('llm.model'),
+      this.settings.getRaw('llm.baseUrl'),
+    ]);
+
+    if (!apiKey) {
+      throw new BadRequestException('LLM not configured');
+    }
+
+    const openai = new OpenAI({
+      apiKey,
+      baseURL: baseUrl || undefined,
+    });
+    return { openai, model: model || 'gpt-4o' };
+  }
+
+  private buildStoryboardUserMessage(params: {
+    instruction: string;
+    baseDraft?: StoryboardPayload;
+    characterProfile?: Record<string, unknown>;
+    mode?: 'fast' | 'detailed';
+  }): string {
+    return JSON.stringify(
+      {
+        task: '根据用户指令生成下一版全量分镜 JSON',
+        interactionMode: params.mode ?? 'fast',
+        instruction: params.instruction,
+        characterProfile: params.characterProfile ?? null,
+        constraints: { maxShots: 5, minDuration: 1, maxDuration: 12 },
+        baseDraft: params.baseDraft ?? null,
+        schema: {
+          version: '1.0',
+          intent: 'string',
+          shots: [
+            {
+              order: 0,
+              prompt: 'string',
+              shotSize: 'extreme-wide|wide|medium|close-up|extreme-close-up',
+              angle: 'eye-level|low|high|dutch|aerial',
+              movement: 'static|pan|tilt|dolly|zoom|handheld',
+              duration: 5,
+              requiredElements: ['string'],
+              forbiddenElements: ['string'],
+            },
+          ],
+        },
+      },
+      null,
+      2,
+    );
   }
 }

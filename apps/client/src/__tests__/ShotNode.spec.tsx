@@ -36,8 +36,8 @@ describe('ShotNode', () => {
         />
       </ReactFlowProvider>,
     );
-    const bar = document.querySelector('.bg-blue-500.h-1\\.5');
-    expect(bar).toBeTruthy();
+    expect(screen.getByText('A mountain cabin at sunrise')).toBeDefined();
+    expect(document.querySelector('div[style*="width: 67%"]')).toBeTruthy();
   });
 
   it('displays error on failure', () => {

@@ -25,6 +25,11 @@ async function authFetch(url: string, options?: RequestInit): Promise<Response> 
   });
 }
 
+function getAuthHeader(): Record<string, string> {
+  const token = getToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 /**
  * Fetch a presigned URL for a shot's generated video.
  * Call once and use the returned URL as <video src>.
@@ -136,10 +141,117 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(params),
     }),
+  draftStoryboard: (params: {
+    projectId: string;
+    instruction: string;
+    baseDraft?: unknown;
+    mode?: 'fast' | 'detailed';
+  }) =>
+    request<{
+      draftId: string;
+      version: number;
+      summary: string;
+      storyboard: unknown;
+      diff: string[];
+    }>('/llm/storyboard/draft', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    }),
+  draftStoryboardStream: async (
+    params: {
+      projectId: string;
+      instruction: string;
+      baseDraft?: unknown;
+      mode?: 'fast' | 'detailed';
+    },
+    handlers: {
+      onProgress?: (payload: { stage: string }) => void;
+      onToken?: (payload: { chunk: string }) => void;
+      onClarification?: (payload: { question: string }) => void;
+      onConstraintSummary?: (payload: { characterProfile?: unknown }) => void;
+      onDone: (payload: {
+        draftId: string;
+        version: number;
+        summary: string;
+        storyboard: unknown;
+        diff: string[];
+        characterProfile?: unknown;
+      }) => void;
+      onError?: (message: string) => void;
+    },
+  ) => {
+    const res = await fetch(`${BASE}/llm/storyboard/draft/stream`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeader(),
+      },
+      body: JSON.stringify(params),
+    });
+
+    if (!res.ok || !res.body) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.message ?? 'SSE request failed');
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder('utf-8');
+    let buffer = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const parts = buffer.split('\n\n');
+      buffer = parts.pop() ?? '';
+
+      for (const part of parts) {
+        const eventLine = part
+          .split('\n')
+          .find((line) => line.startsWith('event:'))
+          ?.replace('event:', '')
+          .trim();
+        const dataLine = part
+          .split('\n')
+          .find((line) => line.startsWith('data:'))
+          ?.replace('data:', '')
+          .trim();
+        if (!eventLine || !dataLine) continue;
+        const payload = JSON.parse(dataLine);
+        if (eventLine === 'progress') handlers.onProgress?.(payload);
+        if (eventLine === 'token') handlers.onToken?.(payload);
+        if (eventLine === 'clarification') handlers.onClarification?.(payload);
+        if (eventLine === 'constraint-summary') handlers.onConstraintSummary?.(payload);
+        if (eventLine === 'done') handlers.onDone(payload);
+        if (eventLine === 'error') handlers.onError?.(payload.message ?? 'draft failed');
+      }
+    }
+  },
 
   // Settings
   getSettings: () => request<Setting[]>('/settings'),
   getSettingsByProvider: (provider: string) => request<Setting[]>(`/settings/${provider}`),
   updateSettings: (items: { key: string; value: string }[]) =>
     request<Setting[]>('/settings', { method: 'PUT', body: JSON.stringify({ items }) }),
+  getStoryboardDrafts: (projectId: string) =>
+    request<
+      {
+        id: string;
+        version: number;
+        summary?: string;
+        diff?: { lines?: string[] };
+        storyboard?: unknown;
+        characterProfile?: unknown;
+        isApplied?: boolean;
+        appliedAt?: string | null;
+        createdAt?: string;
+      }[]
+    >(`/projects/${projectId}/storyboard/drafts`),
+  applyStoryboard: (projectId: string, draftId: string, mode: 'replace_all') =>
+    request<{ ok: boolean; appliedVersion: number; shotCount: number }>(
+      `/projects/${projectId}/storyboard/apply`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ draftId, mode }),
+      },
+    ),
 };
