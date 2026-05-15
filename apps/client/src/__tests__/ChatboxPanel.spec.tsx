@@ -16,5 +16,6 @@ describe('ChatboxPanel', () => {
     expect(screen.getByText('总时长: 0 秒')).toBeDefined();
     expect(screen.getByText('角色一致性约束')).toBeDefined();
     expect(screen.getByText('快速模式')).toBeDefined();
+    expect(screen.getByText(/工作流阶段/)).toBeDefined();
   });
 });

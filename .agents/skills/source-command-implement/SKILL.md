@@ -1,6 +1,6 @@
 ---
-name: "source-command-implement"
-description: "从 openspec spec 出发，经 plan-eng-review 审查后，使用 subagent-driven-development 并行实现"
+name: 'source-command-implement'
+description: '从 openspec spec 出发，经 plan-eng-review 审查后，使用 subagent-driven-development 并行实现'
 ---
 
 # source-command-implement
@@ -31,6 +31,7 @@ openspec instructions apply --change "<name>" --json
 ```
 
 读取所有 artifacts：
+
 - `proposal.md` — 理解要做什么、为什么
 - `design.md` — 理解架构和设计决策
 - `tasks.md` — 获取任务列表

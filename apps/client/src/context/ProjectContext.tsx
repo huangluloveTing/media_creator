@@ -4,7 +4,7 @@ import type { ProjectFull } from '../types';
 interface ProjectState {
   project: ProjectFull | null;
   selectedElementId: string | null;
-  selectedElementType: 'shot' | 'edge' | 'start' | 'merge' | null;
+  selectedElementType: 'shot' | 'edge' | 'start' | 'merge' | 'character' | null;
   isGenerating: boolean;
   pollInterval: number;
 }

@@ -70,6 +70,7 @@ export class LlmController {
 
     try {
       send('progress', { stage: 'validating' });
+      send('character-draft', { stage: 'character_profile_check' });
       if (isInstructionInsufficient(body.instruction)) {
         send('clarification', {
           question: '请补充角色/风格/节奏中的至少一项，以便更精准生成分镜。',
@@ -86,12 +87,23 @@ export class LlmController {
         (chunk) => send('token', { chunk }),
       );
       if (result.characterProfile) {
+        if (!(result.characterProfile as any).confirmed) {
+          send('character-confirmation-needed', {
+            message: '人物形象未确认，请先在人物形象节点确认后再生成分镜。',
+          });
+        }
+        send('character-summary', { characterProfile: result.characterProfile });
         send('constraint-summary', { characterProfile: result.characterProfile });
       }
       send('progress', { stage: 'persisting' });
       send('done', result);
       res.end();
     } catch (error: any) {
+      if (error?.message === 'CHARACTER_CONFIRMATION_REQUIRED') {
+        send('character-confirmation-needed', {
+          message: '人物形象未确认，请先在人物形象节点确认后再生成分镜。',
+        });
+      }
       send('error', { message: error?.message ?? 'draft failed' });
       res.end();
     }

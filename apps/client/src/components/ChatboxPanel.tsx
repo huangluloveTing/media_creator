@@ -45,6 +45,9 @@ export default function ChatboxPanel() {
   const [drafts, setDrafts] = useState<StoryboardDraft[]>([]);
   const [activeDraft, setActiveDraft] = useState<StoryboardDraft | null>(null);
   const [mode, setMode] = useState<'fast' | 'detailed'>('fast');
+  const [workflowStage, setWorkflowStage] = useState<
+    'character_drafting' | 'character_confirmed' | 'storyboard_drafting' | 'storyboard_refining'
+  >('character_drafting');
   const [characterSummary, setCharacterSummary] = useState<Record<string, unknown> | null>(null);
 
   const shotCount = activeDraft?.storyboard?.shots?.length ?? 0;
@@ -66,16 +69,34 @@ export default function ChatboxPanel() {
     setDrafts(mapped);
     const current = mapped[0] ?? null;
     setActiveDraft(current);
-    setCharacterSummary((current?.characterProfile as Record<string, unknown>) ?? null);
+    const projectProfile = (state.project as any)?.characterProfileJson as Record<string, unknown>;
+    const summary =
+      projectProfile ?? (current?.characterProfile as Record<string, unknown>) ?? null;
+    setCharacterSummary(summary);
+    setWorkflowStage((summary as any)?.confirmed ? 'character_confirmed' : 'character_drafting');
   };
 
   const onSend = async () => {
     if (!state.project || !input.trim()) return;
+    const projectProfile = ((state.project as any).characterProfileJson ?? null) as Record<
+      string,
+      unknown
+    > | null;
+    if (!projectProfile || !(projectProfile as any).confirmed) {
+      message.warning('请先在人物形象节点确认角色形象，再生成分镜。');
+      setMessages((prev) => [
+        ...prev,
+        { role: 'system', content: '请先完成人物形象节点确认，然后再开始分镜生成。' },
+      ]);
+      setWorkflowStage('character_drafting');
+      return;
+    }
     const instruction = input.trim();
     setMessages((prev) => [...prev, { role: 'user', content: instruction }]);
     setInput('');
     setDrafting(true);
     try {
+      setWorkflowStage('storyboard_drafting');
       let loadingIndex = -1;
       let tokenBuffer = '';
       setMessages((prev) => {
@@ -97,7 +118,10 @@ export default function ChatboxPanel() {
               persisting: '保存草案中...',
             };
             if (tokenBuffer && stage === 'generating') return;
-            setMessages((prev) => [...prev, { role: 'system', content: stageText[stage] ?? `处理中: ${stage}` }]);
+            setMessages((prev) => [
+              ...prev,
+              { role: 'system', content: stageText[stage] ?? `处理中: ${stage}` },
+            ]);
           },
           onToken: ({ chunk }) => {
             tokenBuffer += chunk;
@@ -110,18 +134,37 @@ export default function ChatboxPanel() {
           onClarification: ({ question }) => {
             setMessages((prev) => [...prev, { role: 'system', content: `澄清问题：${question}` }]);
           },
+          onCharacterDraft: ({ stage }) => {
+            setMessages((prev) => [...prev, { role: 'system', content: `人物形象阶段：${stage}` }]);
+          },
+          onCharacterConfirmationNeeded: ({ message: msg }) => {
+            setMessages((prev) => [...prev, { role: 'system', content: msg }]);
+            setWorkflowStage('character_drafting');
+          },
+          onCharacterSummary: ({ characterProfile }) => {
+            setCharacterSummary((characterProfile as Record<string, unknown>) ?? null);
+            setMessages((prev) => [...prev, { role: 'system', content: '人物形象摘要已同步' }]);
+          },
           onConstraintSummary: ({ characterProfile }) => {
             setCharacterSummary((characterProfile as Record<string, unknown>) ?? null);
-            setMessages((prev) => [...prev, { role: 'system', content: '已更新角色一致性约束摘要' }]);
+            setMessages((prev) => [
+              ...prev,
+              { role: 'system', content: '已更新角色一致性约束摘要' },
+            ]);
           },
           onDone: async (result) => {
-            const assistantText = [`已生成 v${result.version}`, result.summary, ...(result.diff ?? [])]
+            const assistantText = [
+              `已生成 v${result.version}`,
+              result.summary,
+              ...(result.diff ?? []),
+            ]
               .filter(Boolean)
               .join('\n');
             setMessages((prev) =>
               prev.map((m, i) => (i === loadingIndex ? { ...m, content: assistantText } : m)),
             );
             setCharacterSummary((result.characterProfile as Record<string, unknown>) ?? null);
+            setWorkflowStage('storyboard_refining');
             await refreshDrafts(state.project!.id);
           },
           onError: (msg) => {
@@ -135,6 +178,7 @@ export default function ChatboxPanel() {
     } catch (err: any) {
       message.error(err.message);
       setMessages((prev) => [...prev, { role: 'assistant', content: `失败：${err.message}` }]);
+      setWorkflowStage('character_drafting');
     } finally {
       setDrafting(false);
     }
@@ -194,6 +238,16 @@ export default function ChatboxPanel() {
           { label: '精细模式', value: 'detailed' },
         ]}
       />
+      <Text style={{ color: '#94a3b8', fontSize: 12 }}>
+        工作流阶段：
+        {workflowStage === 'character_drafting'
+          ? '人物形象生成'
+          : workflowStage === 'character_confirmed'
+            ? '人物形象已确认'
+            : workflowStage === 'storyboard_drafting'
+              ? '分镜生成中'
+              : '分镜迭代中'}
+      </Text>
 
       <div
         style={{
@@ -251,7 +305,12 @@ export default function ChatboxPanel() {
               <div style={{ width: '100%' }}>
                 <Text
                   style={{
-                    color: m.role === 'user' ? '#7dd3fc' : m.role === 'assistant' ? '#c4b5fd' : '#fbbf24',
+                    color:
+                      m.role === 'user'
+                        ? '#7dd3fc'
+                        : m.role === 'assistant'
+                          ? '#c4b5fd'
+                          : '#fbbf24',
                     fontSize: 12,
                   }}
                 >

@@ -1,5 +1,15 @@
 import { useState, useEffect } from 'react';
-import { Select, InputNumber, Button, Typography, Tag, message, Progress, Modal, Collapse } from 'antd';
+import {
+  Select,
+  InputNumber,
+  Button,
+  Typography,
+  Tag,
+  message,
+  Progress,
+  Modal,
+  Collapse,
+} from 'antd';
 import {
   CameraOutlined,
   ThunderboltOutlined,

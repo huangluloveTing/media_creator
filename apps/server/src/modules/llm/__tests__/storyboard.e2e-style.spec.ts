@@ -34,7 +34,17 @@ describe('Storyboard e2e-style flow', () => {
 
   const shotRepo = { manager: { transaction: jest.fn() } };
   const edgeRepo = {};
-  const projectService = { findOne: jest.fn(async (id: string) => ({ id })) };
+  const projectService = {
+    findOne: jest.fn(async (id: string) => ({
+      id,
+      characterProfileJson: {
+        confirmed: true,
+        appearance: ['长发'],
+        outfit: ['校服'],
+        immutableTraits: [],
+      },
+    })),
+  };
 
   const llmService = {
     draftStoryboard: jest.fn(),

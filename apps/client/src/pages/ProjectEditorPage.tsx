@@ -42,7 +42,7 @@ export default function ProjectEditorPage() {
   const s = status ? (statusConfig[status] ?? statusConfig.draft) : null;
 
   return (
-    <Layout style={{ height: '100vh', background: '#0a0a1a' }}>
+    <Layout style={{ height: 'calc(100vh - 56px)', background: '#0a0a1a' }}>
       {/* Toolbar */}
       <Header
         style={{

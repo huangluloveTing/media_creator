@@ -48,6 +48,9 @@ export class Project {
   @Column({ length: 500, nullable: true, name: 'final_video_key' })
   finalVideoKey!: string;
 
+  @Column({ name: 'character_profile_json', type: 'jsonb', nullable: true })
+  characterProfileJson: Record<string, unknown> | null;
+
   @Column({
     length: 30,
     default: 'draft',

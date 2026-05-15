@@ -1,4 +1,4 @@
-## ADDED Requirements
+## MODIFIED Requirements
 
 ### Requirement: 导演式系统提示词
 系统 SHALL 使用“视频脚本专家 + 分镜导演”角色化系统提示词驱动分镜生成，以提升叙事质量与用户意图对齐。

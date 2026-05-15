@@ -169,6 +169,9 @@ export const api = {
       onToken?: (payload: { chunk: string }) => void;
       onClarification?: (payload: { question: string }) => void;
       onConstraintSummary?: (payload: { characterProfile?: unknown }) => void;
+      onCharacterDraft?: (payload: { stage: string }) => void;
+      onCharacterConfirmationNeeded?: (payload: { message: string }) => void;
+      onCharacterSummary?: (payload: { characterProfile?: unknown }) => void;
       onDone: (payload: {
         draftId: string;
         version: number;
@@ -221,6 +224,10 @@ export const api = {
         if (eventLine === 'token') handlers.onToken?.(payload);
         if (eventLine === 'clarification') handlers.onClarification?.(payload);
         if (eventLine === 'constraint-summary') handlers.onConstraintSummary?.(payload);
+        if (eventLine === 'character-draft') handlers.onCharacterDraft?.(payload);
+        if (eventLine === 'character-confirmation-needed')
+          handlers.onCharacterConfirmationNeeded?.(payload);
+        if (eventLine === 'character-summary') handlers.onCharacterSummary?.(payload);
         if (eventLine === 'done') handlers.onDone(payload);
         if (eventLine === 'error') handlers.onError?.(payload.message ?? 'draft failed');
       }

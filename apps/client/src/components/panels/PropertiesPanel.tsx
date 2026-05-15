@@ -5,6 +5,7 @@ import StartProperties from './StartProperties';
 import ShotProperties from './ShotProperties';
 import EdgeProperties from './EdgeProperties';
 import MergeProperties from './MergeProperties';
+import CharacterProperties from './CharacterProperties';
 
 const { Text } = Typography;
 
@@ -42,6 +43,8 @@ export default function PropertiesPanel() {
         return <StartProperties />;
       case 'merge':
         return <MergeProperties />;
+      case 'character':
+        return <CharacterProperties />;
       case 'shot': {
         const shot = project.shots.find((s) => s.id === selectedElementId);
         if (!shot) return null;

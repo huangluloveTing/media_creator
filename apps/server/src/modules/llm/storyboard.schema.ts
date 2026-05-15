@@ -18,7 +18,13 @@ export interface StoryboardPayload {
   shots: StoryboardShot[];
 }
 
-const SHOT_SIZES = new Set<ShotSize>(['extreme-wide', 'wide', 'medium', 'close-up', 'extreme-close-up']);
+const SHOT_SIZES = new Set<ShotSize>([
+  'extreme-wide',
+  'wide',
+  'medium',
+  'close-up',
+  'extreme-close-up',
+]);
 const ANGLES = new Set<ShotAngle>(['eye-level', 'low', 'high', 'dutch', 'aerial']);
 const MOVEMENTS = new Set<ShotMovement>(['static', 'pan', 'tilt', 'dolly', 'zoom', 'handheld']);
 
@@ -75,7 +81,8 @@ export function validateStoryboardPayload(input: unknown): StoryboardPayload {
       }
     }
 
-    if (raw.order !== idx) throw new HttpException('CONSTRAINT_VIOLATION', HttpStatus.UNPROCESSABLE_ENTITY);
+    if (raw.order !== idx)
+      throw new HttpException('CONSTRAINT_VIOLATION', HttpStatus.UNPROCESSABLE_ENTITY);
     if (typeof raw.prompt !== 'string' || !raw.prompt.trim()) {
       throw new HttpException('CONSTRAINT_VIOLATION', HttpStatus.UNPROCESSABLE_ENTITY);
     }
@@ -91,10 +98,16 @@ export function validateStoryboardPayload(input: unknown): StoryboardPayload {
     if (typeof raw.duration !== 'number' || raw.duration < 1 || raw.duration > 12) {
       throw new HttpException('CONSTRAINT_VIOLATION', HttpStatus.UNPROCESSABLE_ENTITY);
     }
-    if (!Array.isArray(raw.requiredElements) || !raw.requiredElements.every((v) => typeof v === 'string')) {
+    if (
+      !Array.isArray(raw.requiredElements) ||
+      !raw.requiredElements.every((v) => typeof v === 'string')
+    ) {
       throw new HttpException('INVALID_STORYBOARD_SCHEMA', HttpStatus.UNPROCESSABLE_ENTITY);
     }
-    if (!Array.isArray(raw.forbiddenElements) || !raw.forbiddenElements.every((v) => typeof v === 'string')) {
+    if (
+      !Array.isArray(raw.forbiddenElements) ||
+      !raw.forbiddenElements.every((v) => typeof v === 'string')
+    ) {
       throw new HttpException('INVALID_STORYBOARD_SCHEMA', HttpStatus.UNPROCESSABLE_ENTITY);
     }
 

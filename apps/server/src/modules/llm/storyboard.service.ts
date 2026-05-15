@@ -18,6 +18,7 @@ export interface CharacterProfile {
   appearance: string[];
   outfit: string[];
   immutableTraits: string[];
+  confirmed?: boolean;
 }
 
 @Injectable()
@@ -39,13 +40,10 @@ export class StoryboardService {
     baseDraft?: StoryboardPayload;
     mode?: 'fast' | 'detailed';
   }) {
-    await this.projectService.findOne(params.projectId);
+    const project = await this.projectService.findOne(params.projectId);
     const instruction = ensureInstruction(params.instruction);
-    const characterProfile = await this.resolveCharacterProfile(
-      params.projectId,
-      instruction,
-      undefined,
-    );
+    const characterProfile = await this.resolveCharacterProfile(project, instruction, undefined);
+    this.ensureCharacterConfirmed(characterProfile);
     const llmRaw = await this.llmService.draftStoryboard({
       instruction,
       baseDraft: params.baseDraft,
@@ -70,13 +68,10 @@ export class StoryboardService {
     },
     onToken: (chunk: string) => void,
   ) {
-    await this.projectService.findOne(params.projectId);
+    const project = await this.projectService.findOne(params.projectId);
     const instruction = ensureInstruction(params.instruction);
-    const characterProfile = await this.resolveCharacterProfile(
-      params.projectId,
-      instruction,
-      undefined,
-    );
+    const characterProfile = await this.resolveCharacterProfile(project, instruction, undefined);
+    this.ensureCharacterConfirmed(characterProfile);
     const llmRaw = await this.llmService.draftStoryboardStream(
       {
         instruction,
@@ -104,6 +99,7 @@ export class StoryboardService {
   ) {
     const parsed = parseJsonResponse(llmRaw);
     const storyboard = validateStoryboardPayload(parsed);
+    this.ensureStoryboardContainsCharacterElements(storyboard, characterProfile);
 
     const latest = await this.draftRepo.findOne({
       where: { projectId },
@@ -122,7 +118,9 @@ export class StoryboardService {
       if (before.angle !== s.angle) changes.push('angle');
       if (before.movement !== s.movement) changes.push('movement');
       if (before.duration !== s.duration) changes.push('duration');
-      return changes.length ? `镜头 #${s.order + 1} 更新: ${changes.join(', ')}` : `镜头 #${s.order + 1} 无变化`;
+      return changes.length
+        ? `镜头 #${s.order + 1} 更新: ${changes.join(', ')}`
+        : `镜头 #${s.order + 1} 无变化`;
     });
 
     const entity = this.draftRepo.create({
@@ -208,14 +206,23 @@ export class StoryboardService {
         throw new HttpException('APPLY_TRANSACTION_FAILED', HttpStatus.INTERNAL_SERVER_ERROR);
       }
 
-      await edgeRepo.save(edgeRepo.create({ projectId, sourceShotId: null, targetShotId: savedShots[0].id, position: 0 }));
-      for (let i = 0; i < savedShots.length - 1; i++) {
-        await edgeRepo.save(edgeRepo.create({
+      await edgeRepo.save(
+        edgeRepo.create({
           projectId,
-          sourceShotId: savedShots[i].id,
-          targetShotId: savedShots[i + 1].id,
-          position: i + 1,
-        }));
+          sourceShotId: null,
+          targetShotId: savedShots[0].id,
+          position: 0,
+        }),
+      );
+      for (let i = 0; i < savedShots.length - 1; i++) {
+        await edgeRepo.save(
+          edgeRepo.create({
+            projectId,
+            sourceShotId: savedShots[i].id,
+            targetShotId: savedShots[i + 1].id,
+            position: i + 1,
+          }),
+        );
       }
       await edgeRepo.save(
         edgeRepo.create({
@@ -239,26 +246,29 @@ export class StoryboardService {
   }
 
   private async resolveCharacterProfile(
-    projectId: string,
+    project: any,
     instruction: string,
     incoming?: CharacterProfile,
   ): Promise<CharacterProfile> {
     if (incoming) return incoming;
-    const latest = await this.draftRepo.findOne({ where: { projectId }, order: { version: 'DESC' } });
-    const base = (latest?.characterProfileJson as CharacterProfile | null) ?? {
+    const base = (project?.characterProfileJson as CharacterProfile | null) ?? {
       appearance: [],
       outfit: [],
       immutableTraits: [],
+      confirmed: false,
     };
 
     const words = instruction.split(/[\s,，。.!?？；;:\n]+/).filter(Boolean);
-    const hasFemale = words.some((w) => ['女生', '女孩', '女性', 'woman'].includes(w.toLowerCase()));
+    const hasFemale = words.some((w) =>
+      ['女生', '女孩', '女性', 'woman'].includes(w.toLowerCase()),
+    );
     const hasMale = words.some((w) => ['男生', '男孩', '男性', 'man'].includes(w.toLowerCase()));
     const profile: CharacterProfile = {
       characterName: base.characterName,
       appearance: [...(base.appearance ?? [])],
       outfit: [...(base.outfit ?? [])],
       immutableTraits: [...(base.immutableTraits ?? [])],
+      confirmed: Boolean((base as any).confirmed),
     };
     if (hasFemale && !profile.immutableTraits.includes('gender:female')) {
       profile.immutableTraits.push('gender:female');
@@ -276,5 +286,30 @@ export class StoryboardService {
       profile.outfit.push('校服');
     }
     return profile;
+  }
+
+  private ensureCharacterConfirmed(profile: CharacterProfile) {
+    if (!(profile as any)?.confirmed) {
+      throw new HttpException('CHARACTER_CONFIRMATION_REQUIRED', HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  private ensureStoryboardContainsCharacterElements(
+    storyboard: StoryboardPayload,
+    profile?: CharacterProfile,
+  ) {
+    const keywords = [
+      ...(profile?.appearance ?? []),
+      ...(profile?.outfit ?? []),
+      ...(profile?.immutableTraits ?? []),
+    ]
+      .map((x) => String(x).trim())
+      .filter(Boolean);
+    if (keywords.length === 0) return;
+
+    const invalid = storyboard.shots.find((s) => !keywords.some((k) => s.prompt.includes(k)));
+    if (invalid) {
+      throw new HttpException('CHARACTER_ELEMENTS_MISSING', HttpStatus.UNPROCESSABLE_ENTITY);
+    }
   }
 }

@@ -21,6 +21,7 @@ export interface Project {
   originalVolume: number;
   bgmPath: string | null;
   finalVideoKey: string | null;
+  characterProfileJson: Record<string, unknown> | null;
   status: ProjectStatus;
   createdAt: string;
   updatedAt: string;

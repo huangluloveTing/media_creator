@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsInt, IsNumber, Min, Max } from 'class-validator';
+import { IsString, IsOptional, IsInt, IsNumber, Min, Max, IsObject } from 'class-validator';
 
 export class CreateProjectDto {
   @IsString()
@@ -29,4 +29,8 @@ export class CreateProjectDto {
   @IsOptional()
   @IsString()
   outputDir?: string;
+
+  @IsOptional()
+  @IsObject()
+  characterProfileJson?: Record<string, unknown>;
 }
