@@ -8,6 +8,46 @@ import type {
   TaskStatus,
 } from './enums';
 
+export type PrepNodeType = 'character' | 'world_setting' | 'story_outline';
+export type PrepNodeStatus = 'drafting' | 'confirmed';
+
+export interface CharacterProfile {
+  name: string;
+  appearance: string[];
+  outfit: string[];
+  traits: string[];
+  immutable: string[];
+}
+
+export interface CharacterData {
+  characters: CharacterProfile[];
+}
+
+export interface WorldSettingData {
+  era: string;
+  location: string;
+  atmosphere: string[];
+  rules: string[];
+  visualStyle: string;
+}
+
+export interface StoryOutlineData {
+  premise: string;
+  plotBeats: string[];
+  tone: string;
+  targetShotCount: number;
+}
+
+export type PrepNodeData = CharacterData | WorldSettingData | StoryOutlineData;
+
+export interface PrepNode {
+  id: string;
+  type: PrepNodeType;
+  status: PrepNodeStatus;
+  order: number;
+  data: PrepNodeData;
+}
+
 export interface Project {
   id: string;
   title: string;
@@ -22,6 +62,7 @@ export interface Project {
   bgmPath: string | null;
   finalVideoKey: string | null;
   characterProfileJson: Record<string, unknown> | null;
+  prepNodes: PrepNode[];
   status: ProjectStatus;
   createdAt: string;
   updatedAt: string;

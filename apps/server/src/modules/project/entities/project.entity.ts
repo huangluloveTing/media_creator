@@ -51,6 +51,9 @@ export class Project {
   @Column({ name: 'character_profile_json', type: 'jsonb', nullable: true })
   characterProfileJson: Record<string, unknown> | null;
 
+  @Column({ name: 'prep_nodes', type: 'jsonb', nullable: true, default: '[]' })
+  prepNodes: Record<string, unknown>[];
+
   @Column({
     length: 30,
     default: 'draft',

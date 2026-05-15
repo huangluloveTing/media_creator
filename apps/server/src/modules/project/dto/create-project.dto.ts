@@ -33,4 +33,7 @@ export class CreateProjectDto {
   @IsOptional()
   @IsObject()
   characterProfileJson?: Record<string, unknown>;
+
+  @IsOptional()
+  prepNodes?: Record<string, unknown>[];
 }

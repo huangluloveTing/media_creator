@@ -37,12 +37,24 @@ describe('Storyboard e2e-style flow', () => {
   const projectService = {
     findOne: jest.fn(async (id: string) => ({
       id,
-      characterProfileJson: {
-        confirmed: true,
-        appearance: ['长发'],
-        outfit: ['校服'],
-        immutableTraits: [],
-      },
+      prepNodes: [
+        {
+          type: 'character',
+          status: 'confirmed',
+          order: 0,
+          data: {
+            characters: [
+              {
+                name: '女主',
+                appearance: ['长发'],
+                outfit: ['校服'],
+                traits: ['坚韧'],
+                immutable: [],
+              },
+            ],
+          },
+        },
+      ],
     })),
   };
 
@@ -122,8 +134,9 @@ describe('Storyboard e2e-style flow', () => {
 
     expect(r1.characterProfile).toBeDefined();
     expect(r2.characterProfile).toBeDefined();
-    const appearance = ((r2.characterProfile as any)?.appearance ?? []) as string[];
-    const outfit = ((r2.characterProfile as any)?.outfit ?? []) as string[];
+    const characters = ((r2.characterProfile as any)?.characterProfiles ?? []) as any[];
+    const appearance = (characters[0]?.appearance ?? []) as string[];
+    const outfit = (characters[0]?.outfit ?? []) as string[];
     expect(appearance).toContain('长发');
     expect(outfit).toContain('校服');
 

@@ -14,7 +14,7 @@ describe('ChatboxPanel', () => {
     expect(screen.getByText('分镜 Chatbox')).toBeDefined();
     expect(screen.getByText('镜头数: 0/5')).toBeDefined();
     expect(screen.getByText('总时长: 0 秒')).toBeDefined();
-    expect(screen.getByText('角色一致性约束')).toBeDefined();
+    expect(screen.getByText('Prep 约束摘要')).toBeDefined();
     expect(screen.getByText('快速模式')).toBeDefined();
     expect(screen.getByText(/工作流阶段/)).toBeDefined();
   });

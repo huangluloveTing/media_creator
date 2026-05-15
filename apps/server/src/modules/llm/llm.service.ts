@@ -70,6 +70,98 @@ const STORYBOARD_DIRECTOR_PROMPT = `你同时扮演两种角色：
 - 先思考脚本意图，再产出镜头
 `;
 
+const PREP_CHARACTER_PROMPT = `你现在是选角导演（Casting Director）。你的任务是帮助用户细化和完善角色形象。
+
+工作流程：
+1. 倾听用户的角色描述
+2. 针对缺失或不清晰的信息进行追问（外观、服饰、性格特征）
+3. 在信息足够时，输出结构化的角色形象 JSON
+
+追问原则：
+- 每次只问2-3个关键问题，不过度追问
+- 优先追问视觉相关特征（外观、服饰），再追问性格特征
+- 当用户表示满意时，立即输出结构化结果
+
+输出格式（只在确认时输出）：
+\`\`\`json
+{
+  "characters": [{
+    "name": "角色名",
+    "appearance": ["特征1", "特征2"],
+    "outfit": ["服饰1", "服饰2"],
+    "traits": ["性格1", "性格2"],
+    "immutable": ["禁改项1"]
+  }]
+}
+\`\`\`
+`;
+
+const PREP_WORLD_SETTING_PROMPT = `你现在是世界观设计师（World Designer）。你的任务是帮助用户构建故事的世界观设定。
+
+工作流程：
+1. 倾听用户的世界描述
+2. 针对缺失信息追问（时代、地点、氛围、规则）
+3. 在信息足够时，输出结构化的世界观 JSON
+
+输出格式（只在确认时输出）：
+\`\`\`json
+{
+  "era": "时代背景",
+  "location": "地点/场景",
+  "atmosphere": ["氛围1", "氛围2"],
+  "rules": ["规则1", "规则2"],
+  "visualStyle": "视觉风格描述"
+}
+\`\`\`
+`;
+
+const PREP_STORY_OUTLINE_PROMPT = `你现在是故事编剧（Story Writer）。你的任务是帮助用户梳理故事结构和情节点。
+
+工作流程：
+1. 倾听用户的故事想法
+2. 针对缺失信息追问（故事前提、关键情节点、叙事调性）
+3. 在信息足够时，输出结构化的故事梗概 JSON
+
+输出格式（只在确认时输出）：
+\`\`\`json
+{
+  "premise": "故事前提（一句话）",
+  "plotBeats": ["情节点1", "情节点2", "..."],
+  "tone": "叙事调性",
+  "targetShotCount": 5
+}
+\`\`\`
+`;
+
+function getPrepSystemPrompt(prepType: string): string {
+  switch (prepType) {
+    case 'character':
+      return PREP_CHARACTER_PROMPT;
+    case 'world_setting':
+      return PREP_WORLD_SETTING_PROMPT;
+    case 'story_outline':
+      return PREP_STORY_OUTLINE_PROMPT;
+    default:
+      return PREP_CHARACTER_PROMPT;
+  }
+}
+
+function extractPrepJson(text: string): Record<string, unknown> | null {
+  const match = text.match(/```json\s*([\s\S]*?)```/);
+  if (match) {
+    try {
+      return JSON.parse(match[1].trim());
+    } catch {
+      // fall through
+    }
+  }
+  try {
+    return JSON.parse(text.trim());
+  } catch {
+    return null;
+  }
+}
+
 @Injectable()
 export class LlmService {
   constructor(private readonly settings: SettingsService) {}
@@ -220,6 +312,59 @@ ${prompt}`;
     }
   }
 
+  async draftPrepStream(
+    params: {
+      prepType: string;
+      instruction: string;
+      currentData?: Record<string, unknown>;
+    },
+    onToken: (chunk: string) => void,
+  ): Promise<{ text: string; extracted: Record<string, unknown> | null }> {
+    const { openai, model } = await this.getStoryboardClient();
+    const systemPrompt = getPrepSystemPrompt(params.prepType);
+    const userMessage = JSON.stringify({
+      task: `帮助用户完善${params.prepType}类型的前置准备数据`,
+      instruction: params.instruction,
+      currentData: params.currentData ?? null,
+    });
+
+    let fullText = '';
+    try {
+      const stream = await openai.chat.completions.create({
+        model,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userMessage },
+        ],
+        temperature: 0.7,
+        max_tokens: 800,
+        stream: true,
+      });
+
+      for await (const chunk of stream) {
+        const delta = chunk.choices[0]?.delta?.content ?? '';
+        if (!delta) continue;
+        fullText += delta;
+        onToken(delta);
+      }
+
+      if (!fullText.trim()) {
+        throw new HttpException('LLM returned empty response', HttpStatus.INTERNAL_SERVER_ERROR);
+      }
+
+      const extracted = extractPrepJson(fullText.trim());
+      return { text: fullText.trim(), extracted };
+    } catch (error: any) {
+      if (error instanceof HttpException || error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new HttpException(
+        error.message || 'Failed to draft prep',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
   private async getStoryboardClient(): Promise<{ openai: OpenAI; model: string }> {
     const [apiKey, model, baseUrl] = await Promise.all([
       this.settings.getRaw('llm.apiKey'),
@@ -244,13 +389,15 @@ ${prompt}`;
     characterProfile?: Record<string, unknown>;
     mode?: 'fast' | 'detailed';
   }): string {
+    const prepContext = params.characterProfile ?? null;
+    const maxShots = (prepContext as any)?.storyOutline?.targetShotCount ?? 5;
     return JSON.stringify(
       {
         task: '根据用户指令生成下一版全量分镜 JSON',
         interactionMode: params.mode ?? 'fast',
         instruction: params.instruction,
-        characterProfile: params.characterProfile ?? null,
-        constraints: { maxShots: 5, minDuration: 1, maxDuration: 12 },
+        prepContext,
+        constraints: { maxShots, minDuration: 1, maxDuration: 12 },
         baseDraft: params.baseDraft ?? null,
         schema: {
           version: '1.0',

@@ -15,9 +15,18 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useProject } from '../context/ProjectContext';
-import type { ProjectFull } from '../types';
+import type {
+  ProjectFull,
+  PrepNode,
+  CharacterData,
+  WorldSettingData,
+  StoryOutlineData,
+} from '../types';
+import { migrateCharacterProfileToPrepNodes } from '@media-creator/shared';
 import StartNode from './nodes/StartNode';
 import CharacterNode from './nodes/CharacterNode';
+import WorldSettingNode from './nodes/WorldSettingNode';
+import StoryOutlineNode from './nodes/StoryOutlineNode';
 import ShotsContainerNode from './nodes/ShotsContainerNode';
 import MergeNode from './nodes/MergeNode';
 import { getShotsContainerWidth, getShotsContainerHeight } from './nodes/shotsContainerLayout';
@@ -25,15 +34,49 @@ import { getShotsContainerWidth, getShotsContainerHeight } from './nodes/shotsCo
 const nodeTypes: NodeTypes = {
   start: StartNode,
   character: CharacterNode,
+  world_setting: WorldSettingNode,
+  story_outline: StoryOutlineNode,
   shotsContainer: ShotsContainerNode,
   merge: MergeNode,
 };
 
 const CENTER_X = 400;
+const PREP_START_Y = 60;
+const PREP_SPACING = 90;
+
+function resolvePrepNodes(project: ProjectFull): PrepNode[] {
+  const raw = (project as any).prepNodes;
+  if (raw && Array.isArray(raw) && raw.length > 0) {
+    return raw as unknown as PrepNode[];
+  }
+  const migrated = migrateCharacterProfileToPrepNodes((project as any).characterProfileJson);
+  return migrated;
+}
+
+function buildPrepSummary(node: PrepNode): string {
+  switch (node.type) {
+    case 'character': {
+      const data = node.data as CharacterData;
+      const names = (data.characters ?? []).map((c) => c.name || '未命名').join('、');
+      return names || '未配置角色形象';
+    }
+    case 'world_setting': {
+      const data = node.data as WorldSettingData;
+      const parts = [data.era, data.location].filter(Boolean);
+      return parts.join(' / ') || '未配置世界观';
+    }
+    case 'story_outline': {
+      const data = node.data as StoryOutlineData;
+      return data.premise || '未配置故事梗概';
+    }
+    default:
+      return '未配置';
+  }
+}
 
 function hydrateFlow(project: ProjectFull): { nodes: Node[]; edges: Edge[] } {
-  const characterY = 90;
-  const containerY = 220;
+  const prepNodes = resolvePrepNodes(project);
+  const containerY = PREP_START_Y + (prepNodes.length + 1) * PREP_SPACING;
   const containerWidth = getShotsContainerWidth(project.shots.length);
   const containerHeight = getShotsContainerHeight();
   const containerX = CENTER_X - containerWidth / 2;
@@ -49,67 +92,91 @@ function hydrateFlow(project: ProjectFull): { nodes: Node[]; edges: Edge[] } {
       },
       deletable: false,
     },
-    {
-      id: 'character',
-      type: 'character',
-      position: { x: CENTER_X, y: characterY },
-      data: {
-        confirmed: Boolean((project as any).characterProfileJson?.confirmed),
-        summary: buildCharacterSummary((project as any).characterProfileJson),
-      },
-      deletable: false,
-    },
-    {
-      id: 'shots-container',
-      type: 'shotsContainer',
-      position: { x: containerX, y: containerY },
-      data: {},
-      deletable: false,
-      selectable: false,
-    },
-    {
-      id: 'merge',
-      type: 'merge',
-      position: { x: CENTER_X, y: mergeY },
-      data: {
-        bgmName: project.bgmPath ? project.bgmPath.split('/').pop() : undefined,
-        readyToMerge: project.status === 'ready_to_merge',
-      },
-      deletable: false,
-    },
   ];
 
-  const edges: Edge[] = [
-    {
-      id: 'start->character',
-      source: 'start',
-      target: 'character',
+  const edges: Edge[] = [];
+
+  // Render prep nodes in order
+  let prevNodeId = 'start';
+  prepNodes.forEach((pn, i) => {
+    const nodeId = `prep-${pn.type}-${i}`;
+    nodes.push({
+      id: nodeId,
+      type: pn.type,
+      position: { x: CENTER_X, y: PREP_START_Y + i * PREP_SPACING },
+      data: {
+        confirmed: pn.status === 'confirmed',
+        label: prepLabel(pn.type),
+        summary: buildPrepSummary(pn),
+      },
+      deletable: false,
+    });
+    edges.push({
+      id: `${prevNodeId}->${nodeId}`,
+      source: prevNodeId,
+      target: nodeId,
       type: 'straight',
       markerEnd: { type: MarkerType.ArrowClosed },
       style: { stroke: '#475569' },
       selectable: false,
+    });
+    prevNodeId = nodeId;
+  });
+
+  // Shots container
+  nodes.push({
+    id: 'shots-container',
+    type: 'shotsContainer',
+    position: { x: containerX, y: containerY },
+    data: {},
+    deletable: false,
+    selectable: false,
+  });
+  edges.push({
+    id: `${prevNodeId}->shots-container`,
+    source: prevNodeId,
+    target: 'shots-container',
+    type: 'straight',
+    markerEnd: { type: MarkerType.ArrowClosed },
+    style: { stroke: '#475569' },
+    selectable: false,
+  });
+
+  // Merge node
+  nodes.push({
+    id: 'merge',
+    type: 'merge',
+    position: { x: CENTER_X, y: mergeY },
+    data: {
+      bgmName: project.bgmPath ? project.bgmPath.split('/').pop() : undefined,
+      readyToMerge: project.status === 'ready_to_merge',
     },
-    {
-      id: 'character->shots-container',
-      source: 'character',
-      target: 'shots-container',
-      type: 'straight',
-      markerEnd: { type: MarkerType.ArrowClosed },
-      style: { stroke: '#475569' },
-      selectable: false,
-    },
-    {
-      id: 'shots-container->merge',
-      source: 'shots-container',
-      target: 'merge',
-      type: 'straight',
-      markerEnd: { type: MarkerType.ArrowClosed },
-      style: { stroke: '#475569' },
-      selectable: false,
-    },
-  ];
+    deletable: false,
+  });
+  edges.push({
+    id: 'shots-container->merge',
+    source: 'shots-container',
+    target: 'merge',
+    type: 'straight',
+    markerEnd: { type: MarkerType.ArrowClosed },
+    style: { stroke: '#475569' },
+    selectable: false,
+  });
 
   return { nodes, edges };
+}
+
+function prepLabel(type: string): string {
+  switch (type) {
+    case 'character':
+      return '人物形象';
+    case 'world_setting':
+      return '世界观设定';
+    case 'story_outline':
+      return '故事梗概';
+    default:
+      return type;
+  }
 }
 
 export default function FlowEditor() {
@@ -126,9 +193,7 @@ export default function FlowEditor() {
     }
   }, [state.project, setNodes, setEdges]);
 
-  // Auto-fit viewport when shot count changes
   useEffect(() => {
-    // Wait for nodes to render before fitting
     requestAnimationFrame(() => fitView({ padding: 0.2, duration: 200 }));
   }, [state.project?.shots.length, state.project?.id, fitView]);
 
@@ -136,12 +201,15 @@ export default function FlowEditor() {
     (_: React.MouseEvent, node: Node) => {
       if (node.id === 'start') {
         dispatch({ type: 'SELECT_ELEMENT', payload: { id: 'start', type: 'start' } });
-      } else if (node.id === 'character') {
-        dispatch({ type: 'SELECT_ELEMENT', payload: { id: 'character', type: 'character' } });
+      } else if (node.id.startsWith('prep-character')) {
+        dispatch({ type: 'SELECT_ELEMENT', payload: { id: node.id, type: 'character' } });
+      } else if (node.id.startsWith('prep-world_setting')) {
+        dispatch({ type: 'SELECT_ELEMENT', payload: { id: node.id, type: 'world_setting' } });
+      } else if (node.id.startsWith('prep-story_outline')) {
+        dispatch({ type: 'SELECT_ELEMENT', payload: { id: node.id, type: 'story_outline' } });
       } else if (node.id === 'merge') {
         dispatch({ type: 'SELECT_ELEMENT', payload: { id: 'merge', type: 'merge' } });
       }
-      // shots-container: row clicks dispatch SELECT internally
     },
     [dispatch],
   );
@@ -172,14 +240,4 @@ export default function FlowEditor() {
       </ReactFlow>
     </div>
   );
-}
-
-function buildCharacterSummary(profile?: Record<string, unknown>) {
-  if (!profile) return '未配置角色形象';
-  const p = profile as any;
-  const parts: string[] = [];
-  if (p.characterName) parts.push(String(p.characterName));
-  if (Array.isArray(p.appearance) && p.appearance.length) parts.push(`外观:${p.appearance[0]}`);
-  if (Array.isArray(p.outfit) && p.outfit.length) parts.push(`服饰:${p.outfit[0]}`);
-  return parts.join(' / ') || '未配置角色形象';
 }

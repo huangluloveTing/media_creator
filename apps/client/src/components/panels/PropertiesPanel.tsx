@@ -6,6 +6,8 @@ import ShotProperties from './ShotProperties';
 import EdgeProperties from './EdgeProperties';
 import MergeProperties from './MergeProperties';
 import CharacterProperties from './CharacterProperties';
+import WorldSettingProperties from './WorldSettingProperties';
+import StoryOutlineProperties from './StoryOutlineProperties';
 
 const { Text } = Typography;
 
@@ -45,6 +47,10 @@ export default function PropertiesPanel() {
         return <MergeProperties />;
       case 'character':
         return <CharacterProperties />;
+      case 'world_setting':
+        return <WorldSettingProperties />;
+      case 'story_outline':
+        return <StoryOutlineProperties />;
       case 'shot': {
         const shot = project.shots.find((s) => s.id === selectedElementId);
         if (!shot) return null;

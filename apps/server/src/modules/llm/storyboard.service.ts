@@ -18,7 +18,16 @@ export interface CharacterProfile {
   appearance: string[];
   outfit: string[];
   immutableTraits: string[];
+  traits: string[];
   confirmed?: boolean;
+}
+
+interface PrepNodeData {
+  id: string;
+  type: string;
+  status: string;
+  order: number;
+  data: Record<string, unknown>;
 }
 
 @Injectable()
@@ -42,12 +51,12 @@ export class StoryboardService {
   }) {
     const project = await this.projectService.findOne(params.projectId);
     const instruction = ensureInstruction(params.instruction);
-    const characterProfile = await this.resolveCharacterProfile(project, instruction, undefined);
-    this.ensureCharacterConfirmed(characterProfile);
+    const prepContext = this.collectPrepContext(project);
+    this.ensurePrepConfirmed(prepContext);
     const llmRaw = await this.llmService.draftStoryboard({
       instruction,
       baseDraft: params.baseDraft,
-      characterProfile: characterProfile as unknown as Record<string, unknown>,
+      characterProfile: prepContext as unknown as Record<string, unknown>,
       mode: params.mode,
     });
     return this.persistDraftFromRaw(
@@ -55,7 +64,7 @@ export class StoryboardService {
       instruction,
       llmRaw,
       params.baseDraft,
-      characterProfile,
+      prepContext,
     );
   }
 
@@ -70,13 +79,13 @@ export class StoryboardService {
   ) {
     const project = await this.projectService.findOne(params.projectId);
     const instruction = ensureInstruction(params.instruction);
-    const characterProfile = await this.resolveCharacterProfile(project, instruction, undefined);
-    this.ensureCharacterConfirmed(characterProfile);
+    const prepContext = this.collectPrepContext(project);
+    this.ensurePrepConfirmed(prepContext);
     const llmRaw = await this.llmService.draftStoryboardStream(
       {
         instruction,
         baseDraft: params.baseDraft,
-        characterProfile: characterProfile as unknown as Record<string, unknown>,
+        characterProfile: prepContext as unknown as Record<string, unknown>,
         mode: params.mode,
       },
       onToken,
@@ -86,7 +95,7 @@ export class StoryboardService {
       instruction,
       llmRaw,
       params.baseDraft,
-      characterProfile,
+      prepContext,
     );
   }
 
@@ -95,11 +104,15 @@ export class StoryboardService {
     instruction: string,
     llmRaw: string,
     baseDraft?: StoryboardPayload,
-    characterProfile?: CharacterProfile,
+    characterProfile?: Record<string, unknown>,
   ) {
     const parsed = parseJsonResponse(llmRaw);
     const storyboard = validateStoryboardPayload(parsed);
     this.ensureStoryboardContainsCharacterElements(storyboard, characterProfile);
+    // validate world setting consistency when world setting is confirmed
+    if ((characterProfile as any)?.worldSetting) {
+      this.ensureStoryboardMatchesWorldSetting(storyboard, (characterProfile as any).worldSetting);
+    }
 
     const latest = await this.draftRepo.findOne({
       where: { projectId },
@@ -245,71 +258,68 @@ export class StoryboardService {
     };
   }
 
-  private async resolveCharacterProfile(
-    project: any,
-    instruction: string,
-    incoming?: CharacterProfile,
-  ): Promise<CharacterProfile> {
-    if (incoming) return incoming;
-    const base = (project?.characterProfileJson as CharacterProfile | null) ?? {
-      appearance: [],
-      outfit: [],
-      immutableTraits: [],
-      confirmed: false,
-    };
+  private collectPrepContext(project: any): Record<string, unknown> {
+    const prepNodes: PrepNodeData[] = project?.prepNodes ?? [];
+    const context: Record<string, unknown> = {};
 
-    const words = instruction.split(/[\s,，。.!?？；;:\n]+/).filter(Boolean);
-    const hasFemale = words.some((w) =>
-      ['女生', '女孩', '女性', 'woman'].includes(w.toLowerCase()),
-    );
-    const hasMale = words.some((w) => ['男生', '男孩', '男性', 'man'].includes(w.toLowerCase()));
-    const profile: CharacterProfile = {
-      characterName: base.characterName,
-      appearance: [...(base.appearance ?? [])],
-      outfit: [...(base.outfit ?? [])],
-      immutableTraits: [...(base.immutableTraits ?? [])],
-      confirmed: Boolean((base as any).confirmed),
-    };
-    if (hasFemale && !profile.immutableTraits.includes('gender:female')) {
-      profile.immutableTraits.push('gender:female');
+    for (const pn of prepNodes) {
+      if (pn.status !== 'confirmed') continue;
+      switch (pn.type) {
+        case 'character':
+          context.characterProfiles = (pn.data as any)?.characters ?? [];
+          break;
+        case 'world_setting':
+          context.worldSetting = pn.data;
+          break;
+        case 'story_outline':
+          context.storyOutline = pn.data;
+          break;
+      }
     }
-    if (hasMale && !profile.immutableTraits.includes('gender:male')) {
-      profile.immutableTraits.push('gender:male');
-    }
-    if (instruction.includes('长发') && !profile.appearance.includes('长发')) {
-      profile.appearance.push('长发');
-    }
-    if (instruction.includes('短发') && !profile.appearance.includes('短发')) {
-      profile.appearance.push('短发');
-    }
-    if (instruction.includes('校服') && !profile.outfit.includes('校服')) {
-      profile.outfit.push('校服');
-    }
-    return profile;
+
+    return context;
   }
 
-  private ensureCharacterConfirmed(profile: CharacterProfile) {
-    if (!(profile as any)?.confirmed) {
+  private ensurePrepConfirmed(prepContext: Record<string, unknown>) {
+    const hasCharacters = !!prepContext.characterProfiles;
+    if (!hasCharacters) {
       throw new HttpException('CHARACTER_CONFIRMATION_REQUIRED', HttpStatus.BAD_REQUEST);
     }
   }
 
   private ensureStoryboardContainsCharacterElements(
     storyboard: StoryboardPayload,
-    profile?: CharacterProfile,
+    prepContext?: Record<string, unknown>,
   ) {
-    const keywords = [
-      ...(profile?.appearance ?? []),
-      ...(profile?.outfit ?? []),
-      ...(profile?.immutableTraits ?? []),
-    ]
-      .map((x) => String(x).trim())
-      .filter(Boolean);
-    if (keywords.length === 0) return;
+    const characters = (prepContext as any)?.characterProfiles as any[] | undefined;
+    if (!characters || characters.length === 0) return;
 
-    const invalid = storyboard.shots.find((s) => !keywords.some((k) => s.prompt.includes(k)));
+    const keywords: string[] = [];
+    for (const c of characters) {
+      keywords.push(...(c.appearance ?? []), ...(c.outfit ?? []), ...(c.immutable ?? []));
+    }
+    const trimmed = keywords.map((x) => String(x).trim()).filter(Boolean);
+    if (trimmed.length === 0) return;
+
+    const invalid = storyboard.shots.find((s) => !trimmed.some((k) => s.prompt.includes(k)));
     if (invalid) {
       throw new HttpException('CHARACTER_ELEMENTS_MISSING', HttpStatus.UNPROCESSABLE_ENTITY);
+    }
+  }
+
+  private ensureStoryboardMatchesWorldSetting(
+    storyboard: StoryboardPayload,
+    worldSetting: Record<string, unknown> | undefined,
+  ) {
+    if (!worldSetting) return;
+    const location = worldSetting.location as string | undefined;
+    const atmosphere = (worldSetting.atmosphere as string[]) ?? [];
+    const keywords = [location, ...atmosphere].filter(Boolean).map(String);
+    if (keywords.length === 0) return;
+
+    const mismatch = storyboard.shots.find((s) => !keywords.some((k) => s.prompt.includes(k)));
+    if (mismatch) {
+      throw new HttpException('WORLD_SETTING_MISMATCH', HttpStatus.UNPROCESSABLE_ENTITY);
     }
   }
 }

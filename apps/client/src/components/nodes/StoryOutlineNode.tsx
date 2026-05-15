@@ -1,11 +1,11 @@
 import { memo } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
-import { UserOutlined } from '@ant-design/icons';
+import { BookOutlined } from '@ant-design/icons';
 
-function CharacterNode({ data, selected }: NodeProps) {
+function StoryOutlineNode({ data, selected }: NodeProps) {
   const confirmed = Boolean((data as any).confirmed);
-  const label = ((data as any).label as string) || '人物形象';
-  const summary = ((data as any).summary as string) || '未配置角色形象';
+  const label = ((data as any).label as string) || '故事梗概';
+  const summary = ((data as any).summary as string) || '未配置故事梗概';
 
   return (
     <div
@@ -26,7 +26,7 @@ function CharacterNode({ data, selected }: NodeProps) {
         style={{ background: '#475569', width: 10, height: 10 }}
       />
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-        <UserOutlined style={{ color: confirmed ? '#22c55e' : '#f59e0b' }} />
+        <BookOutlined style={{ color: confirmed ? '#22c55e' : '#f59e0b' }} />
         <span style={{ color: '#e2e8f0', fontSize: 12, fontWeight: 600 }}>{label}</span>
         <span style={{ color: confirmed ? '#22c55e' : '#f59e0b', fontSize: 11 }}>
           {confirmed ? '已确认' : '待确认'}
@@ -42,4 +42,4 @@ function CharacterNode({ data, selected }: NodeProps) {
   );
 }
 
-export default memo(CharacterNode);
+export default memo(StoryOutlineNode);

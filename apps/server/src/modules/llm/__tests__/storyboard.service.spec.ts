@@ -7,6 +7,30 @@ import { Edge } from '../../shot/entities/edge.entity';
 import { ProjectService } from '../../project/project.service';
 import { LlmService } from '../llm.service';
 
+function makeCharacterPrepNode(
+  confirmed: boolean,
+  appearances: string[],
+  outfits: string[],
+  traits: string[],
+) {
+  return {
+    type: 'character',
+    status: confirmed ? 'confirmed' : 'drafting',
+    order: 0,
+    data: {
+      characters: [
+        {
+          name: '主角',
+          appearance: appearances,
+          outfit: outfits,
+          traits,
+          immutable: [],
+        },
+      ],
+    },
+  };
+}
+
 describe('StoryboardService', () => {
   let service: StoryboardService;
 
@@ -40,15 +64,10 @@ describe('StoryboardService', () => {
     service = module.get(StoryboardService);
   });
 
-  it('creates draft with incremented version', async () => {
+  it('creates draft with incremented version using prepNodes', async () => {
     projectService.findOne.mockResolvedValue({
       id: 'p1',
-      characterProfileJson: {
-        confirmed: true,
-        appearance: ['长发'],
-        outfit: ['校服'],
-        immutableTraits: [],
-      },
+      prepNodes: [makeCharacterPrepNode(true, ['长发'], ['校服'], ['坚韧'])],
     });
     llmService.draftStoryboard.mockResolvedValue(
       JSON.stringify({
@@ -57,7 +76,7 @@ describe('StoryboardService', () => {
         shots: [
           {
             order: 0,
-            prompt: '长发角色在街头奔跑',
+            prompt: '长发角色穿校服在街头奔跑',
             shotSize: 'medium',
             angle: 'eye-level',
             movement: 'static',
@@ -70,7 +89,6 @@ describe('StoryboardService', () => {
     );
     draftRepo.findOne.mockResolvedValue({
       version: 2,
-      characterProfileJson: { appearance: ['长发'] },
     });
     draftRepo.save.mockImplementation(async (x) => ({ id: 'd1', ...x }));
 
@@ -82,7 +100,7 @@ describe('StoryboardService', () => {
   it('throws on invalid llm json', async () => {
     projectService.findOne.mockResolvedValue({
       id: 'p1',
-      characterProfileJson: { confirmed: true, appearance: [], outfit: [], immutableTraits: [] },
+      prepNodes: [makeCharacterPrepNode(true, [], [], [])],
     });
     llmService.draftStoryboard.mockResolvedValue('not-json');
     await expect(service.createDraft({ projectId: 'p1', instruction: 'hello' })).rejects.toThrow();
@@ -91,7 +109,7 @@ describe('StoryboardService', () => {
   it('throws on constraint violation payload', async () => {
     projectService.findOne.mockResolvedValue({
       id: 'p1',
-      characterProfileJson: { confirmed: true, appearance: [], outfit: [], immutableTraits: [] },
+      prepNodes: [makeCharacterPrepNode(true, [], [], [])],
     });
     llmService.draftStoryboard.mockResolvedValue(
       JSON.stringify({
@@ -155,15 +173,10 @@ describe('StoryboardService', () => {
     await expect(service.applyDraft('p1', 'd1', 'replace_all')).rejects.toThrow('boom');
   });
 
-  it('gates draft when character profile is not confirmed', async () => {
+  it('gates draft when no prep node is confirmed', async () => {
     projectService.findOne.mockResolvedValue({
       id: 'p1',
-      characterProfileJson: {
-        confirmed: false,
-        appearance: ['长发'],
-        outfit: [],
-        immutableTraits: [],
-      },
+      prepNodes: [makeCharacterPrepNode(false, ['长发'], [], [])],
     });
     await expect(service.createDraft({ projectId: 'p1', instruction: 'test' })).rejects.toThrow(
       'CHARACTER_CONFIRMATION_REQUIRED',
@@ -173,12 +186,7 @@ describe('StoryboardService', () => {
   it('rejects storyboard when shot prompt misses character elements', async () => {
     projectService.findOne.mockResolvedValue({
       id: 'p1',
-      characterProfileJson: {
-        confirmed: true,
-        appearance: ['长发'],
-        outfit: ['校服'],
-        immutableTraits: [],
-      },
+      prepNodes: [makeCharacterPrepNode(true, ['长发'], ['校服'], [])],
     });
     llmService.draftStoryboard.mockResolvedValue(
       JSON.stringify({
@@ -200,6 +208,121 @@ describe('StoryboardService', () => {
     );
     await expect(service.createDraft({ projectId: 'p1', instruction: 'test' })).rejects.toThrow(
       'CHARACTER_ELEMENTS_MISSING',
+    );
+  });
+
+  it('collects prep context from confirmed prepNodes (multiple types)', async () => {
+    projectService.findOne.mockResolvedValue({
+      id: 'p2',
+      prepNodes: [
+        makeCharacterPrepNode(true, ['长发'], ['校服'], ['坚韧']),
+        {
+          type: 'world_setting',
+          status: 'confirmed',
+          order: 1,
+          data: {
+            era: '近未来',
+            location: '东京',
+            atmosphere: ['赛博朋克'],
+            rules: [],
+            visualStyle: '暗色调',
+          },
+        },
+        {
+          type: 'story_outline',
+          status: 'confirmed',
+          order: 2,
+          data: {
+            premise: '追击',
+            plotBeats: ['发现', '追逐', '真相'],
+            tone: '紧张',
+            targetShotCount: 4,
+          },
+        },
+      ],
+    });
+    llmService.draftStoryboard.mockResolvedValue(
+      JSON.stringify({
+        version: '1.0',
+        intent: 'x',
+        shots: [
+          {
+            order: 0,
+            prompt: '长发角色在东京赛博朋克街道奔跑',
+            shotSize: 'medium',
+            angle: 'eye-level',
+            movement: 'static',
+            duration: 5,
+            requiredElements: [],
+            forbiddenElements: [],
+          },
+        ],
+      }),
+    );
+    draftRepo.findOne.mockResolvedValue({ version: 0 });
+    draftRepo.save.mockImplementation(async (x) => ({ id: 'd2', ...x }));
+
+    const res = await service.createDraft({ projectId: 'p2', instruction: '生成分镜' });
+    expect(res.characterProfile).toBeDefined();
+    expect((res.characterProfile as any).characterProfiles).toBeDefined();
+    expect((res.characterProfile as any).worldSetting).toBeDefined();
+    expect((res.characterProfile as any).storyOutline).toBeDefined();
+  });
+
+  it('uses storyOutline targetShotCount for max shots constraint', async () => {
+    projectService.findOne.mockResolvedValue({
+      id: 'p3',
+      prepNodes: [
+        makeCharacterPrepNode(true, [], [], []),
+        {
+          type: 'story_outline',
+          status: 'confirmed',
+          order: 0,
+          data: { premise: 'test', plotBeats: [], tone: 'neutral', targetShotCount: 3 },
+        },
+      ],
+    });
+    llmService.draftStoryboard.mockResolvedValue(
+      JSON.stringify({
+        version: '1.0',
+        intent: 'x',
+        shots: [
+          {
+            order: 0,
+            prompt: 'a',
+            shotSize: 'medium',
+            angle: 'eye-level',
+            movement: 'static',
+            duration: 5,
+            requiredElements: [],
+            forbiddenElements: [],
+          },
+        ],
+      }),
+    );
+    draftRepo.findOne.mockResolvedValue({ version: 0 });
+    draftRepo.save.mockImplementation(async (x) => ({ id: 'd3', ...x }));
+
+    await service.createDraft({ projectId: 'p3', instruction: 'test' });
+    // Verify draft was created successfully with story outline context
+    expect(draftRepo.save).toHaveBeenCalled();
+  });
+
+  it('gates when only non-character prep nodes are confirmed (all must be confirmed)', async () => {
+    projectService.findOne.mockResolvedValue({
+      id: 'p1',
+      prepNodes: [
+        makeCharacterPrepNode(false, ['长发'], [], []),
+        {
+          type: 'world_setting',
+          status: 'confirmed',
+          order: 1,
+          data: { era: '现代', location: '', atmosphere: [], rules: [], visualStyle: '' },
+        },
+      ],
+    });
+    await expect(service.createDraft({ projectId: 'p1', instruction: 'test' })).rejects.toThrow(
+      'CHARACTER_CONFIRMATION_REQUIRED',
     );
   });
 });

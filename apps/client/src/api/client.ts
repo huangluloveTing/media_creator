@@ -169,6 +169,8 @@ export const api = {
       onToken?: (payload: { chunk: string }) => void;
       onClarification?: (payload: { question: string }) => void;
       onConstraintSummary?: (payload: { characterProfile?: unknown }) => void;
+      onPrepExtracted?: (payload: { prepType: string; data: unknown }) => void;
+      onPrepSwitched?: (payload: { prepType: string; nodeId: string }) => void;
       onCharacterDraft?: (payload: { stage: string }) => void;
       onCharacterConfirmationNeeded?: (payload: { message: string }) => void;
       onCharacterSummary?: (payload: { characterProfile?: unknown }) => void;
@@ -224,6 +226,8 @@ export const api = {
         if (eventLine === 'token') handlers.onToken?.(payload);
         if (eventLine === 'clarification') handlers.onClarification?.(payload);
         if (eventLine === 'constraint-summary') handlers.onConstraintSummary?.(payload);
+        if (eventLine === 'prep-extracted') handlers.onPrepExtracted?.(payload);
+        if (eventLine === 'prep-switched') handlers.onPrepSwitched?.(payload);
         if (eventLine === 'character-draft') handlers.onCharacterDraft?.(payload);
         if (eventLine === 'character-confirmation-needed')
           handlers.onCharacterConfirmationNeeded?.(payload);
@@ -239,6 +243,65 @@ export const api = {
   getSettingsByProvider: (provider: string) => request<Setting[]>(`/settings/${provider}`),
   updateSettings: (items: { key: string; value: string }[]) =>
     request<Setting[]>('/settings', { method: 'PUT', body: JSON.stringify({ items }) }),
+  draftPrepStream: async (
+    params: {
+      projectId: string;
+      prepType: string;
+      instruction: string;
+      currentData?: Record<string, unknown>;
+    },
+    handlers: {
+      onToken?: (payload: { chunk: string }) => void;
+      onPrepExtracted?: (payload: { prepType: string; data: unknown }) => void;
+      onDone: (payload: { text: string; extracted: unknown }) => void;
+      onError?: (message: string) => void;
+    },
+  ) => {
+    const res = await fetch(`${BASE}/llm/prep/stream`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeader(),
+      },
+      body: JSON.stringify(params),
+    });
+
+    if (!res.ok || !res.body) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.message ?? 'Prep SSE request failed');
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder('utf-8');
+    let buffer = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const parts = buffer.split('\n\n');
+      buffer = parts.pop() ?? '';
+
+      for (const part of parts) {
+        const eventLine = part
+          .split('\n')
+          .find((line) => line.startsWith('event:'))
+          ?.replace('event:', '')
+          .trim();
+        const dataLine = part
+          .split('\n')
+          .find((line) => line.startsWith('data:'))
+          ?.replace('data:', '')
+          .trim();
+        if (!eventLine || !dataLine) continue;
+        const payload = JSON.parse(dataLine);
+        if (eventLine === 'token') handlers.onToken?.(payload);
+        if (eventLine === 'prep-extracted') handlers.onPrepExtracted?.(payload);
+        if (eventLine === 'done') handlers.onDone(payload);
+        if (eventLine === 'error') handlers.onError?.(payload.message ?? 'prep draft failed');
+      }
+    }
+  },
+
   getStoryboardDrafts: (projectId: string) =>
     request<
       {
