@@ -52,7 +52,6 @@ export class StoryboardService {
     const project = await this.projectService.findOne(params.projectId);
     const instruction = ensureInstruction(params.instruction);
     const prepContext = this.collectPrepContext(project);
-    this.ensurePrepConfirmed(prepContext);
     const llmRaw = await this.llmService.draftStoryboard({
       instruction,
       baseDraft: params.baseDraft,
@@ -80,7 +79,6 @@ export class StoryboardService {
     const project = await this.projectService.findOne(params.projectId);
     const instruction = ensureInstruction(params.instruction);
     const prepContext = this.collectPrepContext(project);
-    this.ensurePrepConfirmed(prepContext);
     const llmRaw = await this.llmService.draftStoryboardStream(
       {
         instruction,
@@ -278,13 +276,6 @@ export class StoryboardService {
     }
 
     return context;
-  }
-
-  private ensurePrepConfirmed(prepContext: Record<string, unknown>) {
-    const hasCharacters = !!prepContext.characterProfiles;
-    if (!hasCharacters) {
-      throw new HttpException('CHARACTER_CONFIRMATION_REQUIRED', HttpStatus.BAD_REQUEST);
-    }
   }
 
   private ensureStoryboardContainsCharacterElements(

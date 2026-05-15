@@ -4,18 +4,17 @@ import ChatboxPanel from '../components/ChatboxPanel';
 import { ProjectProvider } from '../context/ProjectContext';
 
 describe('ChatboxPanel', () => {
-  it('renders default summary and title', () => {
+  it('renders chat header, input, and action buttons', () => {
     render(
       <ProjectProvider>
         <ChatboxPanel />
       </ProjectProvider>,
     );
 
-    expect(screen.getByText('分镜 Chatbox')).toBeDefined();
-    expect(screen.getByText('镜头数: 0/5')).toBeDefined();
-    expect(screen.getByText('总时长: 0 秒')).toBeDefined();
-    expect(screen.getByText('Prep 约束摘要')).toBeDefined();
-    expect(screen.getByText('快速模式')).toBeDefined();
-    expect(screen.getByText(/工作流阶段/)).toBeDefined();
+    expect(screen.getByText('Chatbox')).toBeDefined();
+    expect(screen.getByText('发送并迭代')).toBeDefined();
+    expect(screen.getByText('应用到工程')).toBeDefined();
+    expect(screen.getByText('快速')).toBeDefined();
+    expect(screen.getByPlaceholderText('描述你想要生成的视频...')).toBeDefined();
   });
 });

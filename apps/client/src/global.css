@@ -18,6 +18,30 @@ body {
   min-height: 100vh;
 }
 
+/* ── Global Scrollbar ── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1e1e4a;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #2d2d6a;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #1e1e4a transparent;
+}
+
 /* React Flow Controls - dark theme */
 .flow-controls {
   border-radius: 10px !important;

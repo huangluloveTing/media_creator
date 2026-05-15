@@ -33,11 +33,39 @@ function isObject(v: unknown): v is Record<string, unknown> {
 }
 
 export function parseJsonResponse(content: string): unknown {
+  // 1. Direct JSON parse
   try {
     return JSON.parse(content);
   } catch {
-    throw new HttpException('INVALID_LLM_FORMAT', HttpStatus.UNPROCESSABLE_ENTITY);
+    // continue
   }
+
+  // 2. Extract from ```json ... ``` block
+  const fenced = content.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (fenced) {
+    try {
+      return JSON.parse(fenced[1].trim());
+    } catch {
+      // continue
+    }
+  }
+
+  // 3. Find first { or [ and try to parse from there
+  const braceStart = content.indexOf('{');
+  const bracketStart = content.indexOf('[');
+  const start =
+    braceStart >= 0 && bracketStart >= 0
+      ? Math.min(braceStart, bracketStart)
+      : Math.max(braceStart, bracketStart);
+  if (start >= 0) {
+    try {
+      return JSON.parse(content.slice(start));
+    } catch {
+      // continue
+    }
+  }
+
+  throw new HttpException('INVALID_LLM_FORMAT', HttpStatus.UNPROCESSABLE_ENTITY);
 }
 
 export function validateStoryboardPayload(input: unknown): StoryboardPayload {

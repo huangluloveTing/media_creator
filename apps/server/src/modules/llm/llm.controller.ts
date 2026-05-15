@@ -95,13 +95,8 @@ export class LlmController {
       );
       if (result.characterProfile) {
         const cp = result.characterProfile as any;
-        if (!cp.confirmed && Object.keys(cp).length > 0) {
+        if (Object.keys(cp).length > 0) {
           send('prep-extracted', { prepType: 'character', data: cp });
-        }
-        if (!(result.characterProfile as any).confirmed) {
-          send('character-confirmation-needed', {
-            message: '人物形象未确认，请先在人物形象节点确认后再生成分镜。',
-          });
         }
         send('character-summary', { characterProfile: result.characterProfile });
         send('constraint-summary', { characterProfile: result.characterProfile });
@@ -110,21 +105,13 @@ export class LlmController {
       send('done', result);
       res.end();
     } catch (error: any) {
-      if (error?.message === 'CHARACTER_CONFIRMATION_REQUIRED') {
-        send('character-confirmation-needed', {
-          message: '人物形象未确认，请先在人物形象节点确认后再生成分镜。',
-        });
-      }
       send('error', { message: error?.message ?? 'draft failed' });
       res.end();
     }
   }
 
   @Post('prep/stream')
-  async draftPrepStream(
-    @Body() body: DraftPrepBody,
-    @Res() res: Response,
-  ) {
+  async draftPrepStream(@Body() body: DraftPrepBody, @Res() res: Response) {
     if (!body.projectId) throw new BadRequestException('projectId is required');
 
     res.setHeader('Content-Type', 'text/event-stream');

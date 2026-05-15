@@ -173,14 +173,34 @@ describe('StoryboardService', () => {
     await expect(service.applyDraft('p1', 'd1', 'replace_all')).rejects.toThrow('boom');
   });
 
-  it('gates draft when no prep node is confirmed', async () => {
+  it('allows draft with unconfirmed prep nodes (no gate)', async () => {
     projectService.findOne.mockResolvedValue({
       id: 'p1',
       prepNodes: [makeCharacterPrepNode(false, ['长发'], [], [])],
     });
-    await expect(service.createDraft({ projectId: 'p1', instruction: 'test' })).rejects.toThrow(
-      'CHARACTER_CONFIRMATION_REQUIRED',
+    llmService.draftStoryboard.mockResolvedValue(
+      JSON.stringify({
+        version: '1.0',
+        intent: 'x',
+        shots: [
+          {
+            order: 0,
+            prompt: 'test',
+            shotSize: 'medium',
+            angle: 'eye-level',
+            movement: 'static',
+            duration: 5,
+            requiredElements: [],
+            forbiddenElements: [],
+          },
+        ],
+      }),
     );
+    draftRepo.findOne.mockResolvedValue({ version: 0 });
+    draftRepo.save.mockImplementation(async (x) => ({ id: 'd1', ...x }));
+
+    const res = await service.createDraft({ projectId: 'p1', instruction: 'test' });
+    expect(res.version).toBe(1);
   });
 
   it('rejects storyboard when shot prompt misses character elements', async () => {
@@ -308,7 +328,7 @@ describe('StoryboardService', () => {
     expect(draftRepo.save).toHaveBeenCalled();
   });
 
-  it('gates when only non-character prep nodes are confirmed (all must be confirmed)', async () => {
+  it('allows draft with mixed confirmed/unconfirmed prep nodes', async () => {
     projectService.findOne.mockResolvedValue({
       id: 'p1',
       prepNodes: [
@@ -321,8 +341,28 @@ describe('StoryboardService', () => {
         },
       ],
     });
-    await expect(service.createDraft({ projectId: 'p1', instruction: 'test' })).rejects.toThrow(
-      'CHARACTER_CONFIRMATION_REQUIRED',
+    llmService.draftStoryboard.mockResolvedValue(
+      JSON.stringify({
+        version: '1.0',
+        intent: 'x',
+        shots: [
+          {
+            order: 0,
+            prompt: 'test',
+            shotSize: 'medium',
+            angle: 'eye-level',
+            movement: 'static',
+            duration: 5,
+            requiredElements: [],
+            forbiddenElements: [],
+          },
+        ],
+      }),
     );
+    draftRepo.findOne.mockResolvedValue({ version: 0 });
+    draftRepo.save.mockImplementation(async (x) => ({ id: 'd2', ...x }));
+
+    const res = await service.createDraft({ projectId: 'p1', instruction: 'test' });
+    expect(res.version).toBe(1);
   });
 });

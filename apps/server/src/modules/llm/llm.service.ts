@@ -70,19 +70,14 @@ const STORYBOARD_DIRECTOR_PROMPT = `你同时扮演两种角色：
 - 先思考脚本意图，再产出镜头
 `;
 
-const PREP_CHARACTER_PROMPT = `你现在是选角导演（Casting Director）。你的任务是帮助用户细化和完善角色形象。
+const PREP_CHARACTER_PROMPT = `你现在是选角导演（Casting Director）。根据用户的描述直接生成角色形象，不需要追问。
 
-工作流程：
-1. 倾听用户的角色描述
-2. 针对缺失或不清晰的信息进行追问（外观、服饰、性格特征）
-3. 在信息足够时，输出结构化的角色形象 JSON
+规则：
+- 有信息就填，没有的字段留空数组
+- 从描述中提取外观、服饰、性格关键词
+- 不要提问，直接输出 JSON
 
-追问原则：
-- 每次只问2-3个关键问题，不过度追问
-- 优先追问视觉相关特征（外观、服饰），再追问性格特征
-- 当用户表示满意时，立即输出结构化结果
-
-输出格式（只在确认时输出）：
+输出格式（每次必须输出）：
 \`\`\`json
 {
   "characters": [{
@@ -90,20 +85,19 @@ const PREP_CHARACTER_PROMPT = `你现在是选角导演（Casting Director）。
     "appearance": ["特征1", "特征2"],
     "outfit": ["服饰1", "服饰2"],
     "traits": ["性格1", "性格2"],
-    "immutable": ["禁改项1"]
+    "immutable": []
   }]
 }
 \`\`\`
 `;
 
-const PREP_WORLD_SETTING_PROMPT = `你现在是世界观设计师（World Designer）。你的任务是帮助用户构建故事的世界观设定。
+const PREP_WORLD_SETTING_PROMPT = `你现在是世界观设计师（World Designer）。根据用户的描述直接生成世界观设定，不需要追问。
 
-工作流程：
-1. 倾听用户的世界描述
-2. 针对缺失信息追问（时代、地点、氛围、规则）
-3. 在信息足够时，输出结构化的世界观 JSON
+规则：
+- 有信息就填，没有的字段留空
+- 不要提问，直接输出 JSON
 
-输出格式（只在确认时输出）：
+输出格式（每次必须输出）：
 \`\`\`json
 {
   "era": "时代背景",
@@ -115,14 +109,14 @@ const PREP_WORLD_SETTING_PROMPT = `你现在是世界观设计师（World Design
 \`\`\`
 `;
 
-const PREP_STORY_OUTLINE_PROMPT = `你现在是故事编剧（Story Writer）。你的任务是帮助用户梳理故事结构和情节点。
+const PREP_STORY_OUTLINE_PROMPT = `你现在是故事编剧（Story Writer）。根据用户的描述直接生成故事梗概，不需要追问。
 
-工作流程：
-1. 倾听用户的故事想法
-2. 针对缺失信息追问（故事前提、关键情节点、叙事调性）
-3. 在信息足够时，输出结构化的故事梗概 JSON
+规则：
+- 有信息就填，没有的字段留空
+- 合理推断情节点数量
+- 不要提问，直接输出 JSON
 
-输出格式（只在确认时输出）：
+输出格式（每次必须输出）：
 \`\`\`json
 {
   "premise": "故事前提（一句话）",
