@@ -10,7 +10,7 @@ function StartNode({ data, selected }: NodeProps) {
         borderRadius: 12,
         border: '2px solid #064e3b',
         background: 'rgba(52, 211, 153, 0.08)',
-        minWidth: 160,
+        width: 200,
         boxShadow: selected
           ? '0 0 0 2px rgba(52, 211, 153, 0.5), 0 4px 20px rgba(0,0,0,0.3)'
           : '0 2px 10px rgba(0,0,0,0.2)',

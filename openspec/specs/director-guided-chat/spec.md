@@ -18,6 +18,19 @@
 - **THEN** 系统提示词 MUST 注入角色形象要素与禁改项
 - **AND** 导演式输出 SHALL 保持角色形象在镜头间稳定
 
+### Requirement: Prep 结构化提取使用 Zod 校验
+系统 SHALL 在 prep 对话阶段对 LLM 输出的结构化 JSON 使用 Zod schema 校验。
+
+#### Scenario: 人物形象提取结果通过 Zod 校验
+- **WHEN** LLM 在 prep 对话中输出 `{ characters: [...] }` JSON
+- **THEN** 系统 SHALL 使用 `characterDataSchema.safeParse()` 校验
+- **AND** 校验通过后回写到 PrepNode.data
+
+#### Scenario: Zod 校验失败时的处理
+- **WHEN** prep 提取的 JSON 不符合 Zod schema
+- **THEN** 系统 SHALL 记录字段级错误日志
+- **AND** 向用户反馈提取失败，引导重新描述
+
 ### Requirement: 更丰富的对话过程反馈
 系统 SHALL 在生成过程中提供更多交互事件与中间反馈，帮助用户判断结果是否符合预期。
 

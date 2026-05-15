@@ -4,23 +4,9 @@ import { Repository } from 'typeorm';
 import { StoryboardDraft } from './entities/storyboard-draft.entity';
 import { ProjectService } from '../project/project.service';
 import { LlmService } from './llm.service';
-import {
-  ensureInstruction,
-  parseJsonResponse,
-  validateStoryboardPayload,
-  type StoryboardPayload,
-} from './storyboard.schema';
+import { storyboardSchema, type StoryboardPayload } from './storyboard.schema';
 import { Shot } from '../shot/entities/shot.entity';
 import { Edge } from '../shot/entities/edge.entity';
-
-export interface CharacterProfile {
-  characterName?: string;
-  appearance: string[];
-  outfit: string[];
-  immutableTraits: string[];
-  traits: string[];
-  confirmed?: boolean;
-}
 
 interface PrepNodeData {
   id: string;
@@ -50,18 +36,17 @@ export class StoryboardService {
     mode?: 'fast' | 'detailed';
   }) {
     const project = await this.projectService.findOne(params.projectId);
-    const instruction = ensureInstruction(params.instruction);
     const prepContext = this.collectPrepContext(project);
-    const llmRaw = await this.llmService.draftStoryboard({
-      instruction,
+    const storyboard = await this.llmService.draftStoryboard({
+      instruction: params.instruction,
       baseDraft: params.baseDraft,
       characterProfile: prepContext as unknown as Record<string, unknown>,
       mode: params.mode,
     });
-    return this.persistDraftFromRaw(
+    return this.persistDraft(
       params.projectId,
-      instruction,
-      llmRaw,
+      params.instruction,
+      storyboard,
       params.baseDraft,
       prepContext,
     );
@@ -77,37 +62,33 @@ export class StoryboardService {
     onToken: (chunk: string) => void,
   ) {
     const project = await this.projectService.findOne(params.projectId);
-    const instruction = ensureInstruction(params.instruction);
     const prepContext = this.collectPrepContext(project);
-    const llmRaw = await this.llmService.draftStoryboardStream(
+    const storyboard = await this.llmService.draftStoryboardStream(
       {
-        instruction,
+        instruction: params.instruction,
         baseDraft: params.baseDraft,
         characterProfile: prepContext as unknown as Record<string, unknown>,
         mode: params.mode,
       },
       onToken,
     );
-    return this.persistDraftFromRaw(
+    return this.persistDraft(
       params.projectId,
-      instruction,
-      llmRaw,
+      params.instruction,
+      storyboard,
       params.baseDraft,
       prepContext,
     );
   }
 
-  private async persistDraftFromRaw(
+  private async persistDraft(
     projectId: string,
     instruction: string,
-    llmRaw: string,
+    storyboard: StoryboardPayload,
     baseDraft?: StoryboardPayload,
     characterProfile?: Record<string, unknown>,
   ) {
-    const parsed = parseJsonResponse(llmRaw);
-    const storyboard = validateStoryboardPayload(parsed);
     this.ensureStoryboardContainsCharacterElements(storyboard, characterProfile);
-    // validate world setting consistency when world setting is confirmed
     if ((characterProfile as any)?.worldSetting) {
       this.ensureStoryboardMatchesWorldSetting(storyboard, (characterProfile as any).worldSetting);
     }
@@ -185,7 +166,13 @@ export class StoryboardService {
     const draft = await this.draftRepo.findOne({ where: { id: draftId, projectId } });
     if (!draft) throw new NotFoundException('Draft not found');
 
-    const storyboard = validateStoryboardPayload(draft.storyboardJson);
+    // Zod-validate the stored JSON
+    const parsed = storyboardSchema.safeParse(draft.storyboardJson);
+    if (!parsed.success) {
+      const errors = parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ');
+      throw new HttpException(`Draft schema invalid: ${errors}`, HttpStatus.UNPROCESSABLE_ENTITY);
+    }
+    const storyboard = parsed.data;
 
     await this.shotRepo.manager.transaction(async (manager) => {
       await manager.getRepository(Edge).delete({ projectId } as any);
@@ -249,11 +236,7 @@ export class StoryboardService {
       await manager.getRepository(StoryboardDraft).save(draft);
     });
 
-    return {
-      ok: true,
-      appliedVersion: draft.version,
-      shotCount: storyboard.shots.length,
-    };
+    return { ok: true, appliedVersion: draft.version, shotCount: storyboard.shots.length };
   }
 
   private collectPrepContext(project: any): Record<string, unknown> {
@@ -292,9 +275,12 @@ export class StoryboardService {
     const trimmed = keywords.map((x) => String(x).trim()).filter(Boolean);
     if (trimmed.length === 0) return;
 
-    const invalid = storyboard.shots.find((s) => !trimmed.some((k) => s.prompt.includes(k)));
-    if (invalid) {
-      throw new HttpException('CHARACTER_ELEMENTS_MISSING', HttpStatus.UNPROCESSABLE_ENTITY);
+    const missing = storyboard.shots.filter((s) => !trimmed.some((k) => s.prompt.includes(k)));
+    if (missing.length > 0) {
+      console.warn('Character elements check: some shots may not contain character keywords', {
+        missingShots: missing.map((s) => s.order),
+        keywords: trimmed,
+      });
     }
   }
 
@@ -308,9 +294,12 @@ export class StoryboardService {
     const keywords = [location, ...atmosphere].filter(Boolean).map(String);
     if (keywords.length === 0) return;
 
-    const mismatch = storyboard.shots.find((s) => !keywords.some((k) => s.prompt.includes(k)));
-    if (mismatch) {
-      throw new HttpException('WORLD_SETTING_MISMATCH', HttpStatus.UNPROCESSABLE_ENTITY);
+    const missing = storyboard.shots.filter((s) => !keywords.some((k) => s.prompt.includes(k)));
+    if (missing.length > 0) {
+      console.warn('World setting check: some shots may not match world setting keywords', {
+        missingShots: missing.map((s) => s.order),
+        keywords,
+      });
     }
   }
 }

@@ -41,8 +41,12 @@ const nodeTypes: NodeTypes = {
 };
 
 const CENTER_X = 400;
-const PREP_START_Y = 60;
-const PREP_SPACING = 90;
+const PREP_START_Y = 80;
+const PREP_SPACING = 100;
+
+const START_NODE_WIDTH = 200;
+const PREP_NODE_WIDTH = 260;
+const MERGE_NODE_WIDTH = 200;
 
 function resolvePrepNodes(project: ProjectFull): PrepNode[] {
   const raw = (project as any).prepNodes;
@@ -80,13 +84,13 @@ function hydrateFlow(project: ProjectFull): { nodes: Node[]; edges: Edge[] } {
   const containerWidth = getShotsContainerWidth(project.shots.length);
   const containerHeight = getShotsContainerHeight();
   const containerX = CENTER_X - containerWidth / 2;
-  const mergeY = containerY + containerHeight + 80;
+  const mergeY = containerY + containerHeight + PREP_SPACING;
 
   const nodes: Node[] = [
     {
       id: 'start',
       type: 'start',
-      position: { x: CENTER_X, y: 0 },
+      position: { x: CENTER_X - START_NODE_WIDTH / 2, y: 0 },
       data: {
         summary: `${project.resolution} @ ${project.fps}fps / ${project.defaultTransitionType}`,
       },
@@ -103,7 +107,7 @@ function hydrateFlow(project: ProjectFull): { nodes: Node[]; edges: Edge[] } {
     nodes.push({
       id: nodeId,
       type: pn.type,
-      position: { x: CENTER_X, y: PREP_START_Y + i * PREP_SPACING },
+      position: { x: CENTER_X - PREP_NODE_WIDTH / 2, y: PREP_START_Y + i * PREP_SPACING },
       data: {
         confirmed: pn.status === 'confirmed',
         label: prepLabel(pn.type),
@@ -146,7 +150,7 @@ function hydrateFlow(project: ProjectFull): { nodes: Node[]; edges: Edge[] } {
   nodes.push({
     id: 'merge',
     type: 'merge',
-    position: { x: CENTER_X, y: mergeY },
+    position: { x: CENTER_X - MERGE_NODE_WIDTH / 2, y: mergeY },
     data: {
       bgmName: project.bgmPath ? project.bgmPath.split('/').pop() : undefined,
       readyToMerge: project.status === 'ready_to_merge',

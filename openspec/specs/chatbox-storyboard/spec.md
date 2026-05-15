@@ -29,21 +29,21 @@
 - **AND** 形象确认后再进入分镜生成阶段
 
 ### Requirement: 分镜草案必须满足强约束 schema
-系统 SHALL 对 LLM 返回的分镜草案执行严格 schema 校验，不符合约束时拒绝入库。
+系统 SHALL 使用 Zod schema + Vercel AI SDK `generateObject` 或流式 + `.safeParse()` 保证 LLM 返回的分镜草案符合 schema，不符合时拒绝入库并提供字段级错误诊断。
 
 #### Scenario: 草案超过镜头上限
 - **WHEN** LLM 返回镜头数量大于 5
-- **THEN** 系统返回 `422 CONSTRAINT_VIOLATION`
+- **THEN** Zod 校验 SHALL 失败并返回字段级错误信息
 - **AND** 不创建新草案版本
 
 #### Scenario: 草案时长越界
 - **WHEN** 任一镜头 `duration` 小于 1 或大于 12
-- **THEN** 系统返回 `422 CONSTRAINT_VIOLATION`
+- **THEN** Zod 校验 SHALL 失败并返回字段级错误信息
 - **AND** 不创建新草案版本
 
-#### Scenario: LLM 返回非 JSON
-- **WHEN** LLM 返回内容无法解析为 JSON
-- **THEN** 系统返回 `422 INVALID_LLM_FORMAT`
+#### Scenario: LLM 返回非 JSON 或格式不符
+- **WHEN** AI SDK `generateObject` 结果或流式文本不符合 Zod schema
+- **THEN** Zod 校验 SHALL 捕获并返回结构化错误
 - **AND** 不创建新草案版本
 
 ### Requirement: 分镜草案版本需持久化

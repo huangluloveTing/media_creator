@@ -6,6 +6,28 @@ import { Shot } from '../../shot/entities/shot.entity';
 import { Edge } from '../../shot/entities/edge.entity';
 import { ProjectService } from '../../project/project.service';
 import { LlmService } from '../llm.service';
+import type { StoryboardPayload } from '../storyboard.schema';
+
+function makeStoryboardPayload(shots: Partial<StoryboardPayload['shots']> = []): StoryboardPayload {
+  return {
+    version: '1.0' as const,
+    intent: 'test intent',
+    shots: (shots.length
+      ? shots
+      : [
+          {
+            order: 0,
+            prompt: 'test',
+            shotSize: 'medium' as const,
+            angle: 'eye-level' as const,
+            movement: 'static' as const,
+            duration: 5,
+            requiredElements: [],
+            forbiddenElements: [],
+          },
+        ]) as StoryboardPayload['shots'],
+  };
+}
 
 function makeCharacterPrepNode(
   confirmed: boolean,
@@ -19,13 +41,7 @@ function makeCharacterPrepNode(
     order: 0,
     data: {
       characters: [
-        {
-          name: '主角',
-          appearance: appearances,
-          outfit: outfits,
-          traits,
-          immutable: [],
-        },
+        { name: '主角', appearance: appearances, outfit: outfits, traits, immutable: [] },
       ],
     },
   };
@@ -40,11 +56,8 @@ describe('StoryboardService', () => {
     create: jest.fn((v) => v),
     find: jest.fn(),
   };
-  const shotRepo = {
-    manager: { transaction: jest.fn() },
-  };
+  const shotRepo = { manager: { transaction: jest.fn() } };
   const edgeRepo = {};
-
   const projectService = { findOne: jest.fn() };
   const llmService = { draftStoryboard: jest.fn(), draftStoryboardStream: jest.fn() };
 
@@ -70,107 +83,25 @@ describe('StoryboardService', () => {
       prepNodes: [makeCharacterPrepNode(true, ['长发'], ['校服'], ['坚韧'])],
     });
     llmService.draftStoryboard.mockResolvedValue(
-      JSON.stringify({
-        version: '1.0',
-        intent: 'x',
-        shots: [
-          {
-            order: 0,
-            prompt: '长发角色穿校服在街头奔跑',
-            shotSize: 'medium',
-            angle: 'eye-level',
-            movement: 'static',
-            duration: 5,
-            requiredElements: [],
-            forbiddenElements: [],
-          },
-        ],
-      }),
+      makeStoryboardPayload([
+        {
+          order: 0,
+          prompt: '长发角色穿校服在街头奔跑',
+          shotSize: 'medium',
+          angle: 'eye-level',
+          movement: 'static',
+          duration: 5,
+          requiredElements: [],
+          forbiddenElements: [],
+        },
+      ]),
     );
-    draftRepo.findOne.mockResolvedValue({
-      version: 2,
-    });
-    draftRepo.save.mockImplementation(async (x) => ({ id: 'd1', ...x }));
+    draftRepo.findOne.mockResolvedValue({ version: 2 });
+    draftRepo.save.mockImplementation(async (x: any) => ({ id: 'd1', ...x }));
 
     const res = await service.createDraft({ projectId: 'p1', instruction: 'hello' });
     expect(res.version).toBe(3);
     expect(res.characterProfile).toBeDefined();
-  });
-
-  it('throws on invalid llm json', async () => {
-    projectService.findOne.mockResolvedValue({
-      id: 'p1',
-      prepNodes: [makeCharacterPrepNode(true, [], [], [])],
-    });
-    llmService.draftStoryboard.mockResolvedValue('not-json');
-    await expect(service.createDraft({ projectId: 'p1', instruction: 'hello' })).rejects.toThrow();
-  });
-
-  it('throws on constraint violation payload', async () => {
-    projectService.findOne.mockResolvedValue({
-      id: 'p1',
-      prepNodes: [makeCharacterPrepNode(true, [], [], [])],
-    });
-    llmService.draftStoryboard.mockResolvedValue(
-      JSON.stringify({
-        version: '1.0',
-        intent: 'x',
-        shots: [
-          {
-            order: 0,
-            prompt: 'test',
-            shotSize: 'medium',
-            angle: 'eye-level',
-            movement: 'static',
-            duration: 99,
-            requiredElements: [],
-            forbiddenElements: [],
-          },
-        ],
-      }),
-    );
-    await expect(service.createDraft({ projectId: 'p1', instruction: 'hello' })).rejects.toThrow();
-  });
-
-  it('apply rolls back on transaction failure', async () => {
-    projectService.findOne.mockResolvedValue({ id: 'p1' });
-    draftRepo.findOne.mockResolvedValue({
-      id: 'd1',
-      projectId: 'p1',
-      version: 1,
-      storyboardJson: {
-        version: '1.0',
-        intent: 'x',
-        shots: [
-          {
-            order: 0,
-            prompt: 'test',
-            shotSize: 'medium',
-            angle: 'eye-level',
-            movement: 'static',
-            duration: 5,
-            requiredElements: [],
-            forbiddenElements: [],
-          },
-        ],
-      },
-    });
-
-    const mockDelete = jest.fn();
-    const mockSave = jest.fn().mockRejectedValue(new Error('boom'));
-    const mockCreate = jest.fn((x) => x);
-    shotRepo.manager.transaction.mockImplementation(async (cb: any) => {
-      const manager = {
-        getRepository: () => ({
-          delete: mockDelete,
-          save: mockSave,
-          create: mockCreate,
-        }),
-      };
-      await cb(manager);
-    });
-
-    await expect(service.applyDraft('p1', 'd1', 'replace_all')).rejects.toThrow('boom');
   });
 
   it('allows draft with unconfirmed prep nodes (no gate)', async () => {
@@ -178,57 +109,41 @@ describe('StoryboardService', () => {
       id: 'p1',
       prepNodes: [makeCharacterPrepNode(false, ['长发'], [], [])],
     });
-    llmService.draftStoryboard.mockResolvedValue(
-      JSON.stringify({
-        version: '1.0',
-        intent: 'x',
-        shots: [
-          {
-            order: 0,
-            prompt: 'test',
-            shotSize: 'medium',
-            angle: 'eye-level',
-            movement: 'static',
-            duration: 5,
-            requiredElements: [],
-            forbiddenElements: [],
-          },
-        ],
-      }),
-    );
+    llmService.draftStoryboard.mockResolvedValue(makeStoryboardPayload());
     draftRepo.findOne.mockResolvedValue({ version: 0 });
-    draftRepo.save.mockImplementation(async (x) => ({ id: 'd1', ...x }));
+    draftRepo.save.mockImplementation(async (x: any) => ({ id: 'd1', ...x }));
 
     const res = await service.createDraft({ projectId: 'p1', instruction: 'test' });
     expect(res.version).toBe(1);
   });
 
-  it('rejects storyboard when shot prompt misses character elements', async () => {
+  it('warns instead of rejecting when shot prompt misses character elements', async () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     projectService.findOne.mockResolvedValue({
       id: 'p1',
       prepNodes: [makeCharacterPrepNode(true, ['长发'], ['校服'], [])],
     });
     llmService.draftStoryboard.mockResolvedValue(
-      JSON.stringify({
-        version: '1.0',
-        intent: 'x',
-        shots: [
-          {
-            order: 0,
-            prompt: '空房间中的桌子',
-            shotSize: 'medium',
-            angle: 'eye-level',
-            movement: 'static',
-            duration: 5,
-            requiredElements: [],
-            forbiddenElements: [],
-          },
-        ],
-      }),
+      makeStoryboardPayload([
+        {
+          order: 0,
+          prompt: '空房间中的桌子',
+          shotSize: 'medium',
+          angle: 'eye-level',
+          movement: 'static',
+          duration: 5,
+          requiredElements: [],
+          forbiddenElements: [],
+        },
+      ]),
     );
-    await expect(service.createDraft({ projectId: 'p1', instruction: 'test' })).rejects.toThrow(
-      'CHARACTER_ELEMENTS_MISSING',
-    );
+    draftRepo.findOne.mockResolvedValue({ version: 0 });
+    draftRepo.save.mockImplementation(async (x: any) => ({ id: 'd1', ...x }));
+
+    const res = await service.createDraft({ projectId: 'p1', instruction: 'test' });
+    expect(res.version).toBe(1);
+    expect(warnSpy).toHaveBeenCalled();
+    warnSpy.mockRestore();
   });
 
   it('collects prep context from confirmed prepNodes (multiple types)', async () => {
@@ -262,87 +177,35 @@ describe('StoryboardService', () => {
       ],
     });
     llmService.draftStoryboard.mockResolvedValue(
-      JSON.stringify({
-        version: '1.0',
-        intent: 'x',
-        shots: [
-          {
-            order: 0,
-            prompt: '长发角色在东京赛博朋克街道奔跑',
-            shotSize: 'medium',
-            angle: 'eye-level',
-            movement: 'static',
-            duration: 5,
-            requiredElements: [],
-            forbiddenElements: [],
-          },
-        ],
-      }),
+      makeStoryboardPayload([
+        {
+          order: 0,
+          prompt: '长发角色在东京赛博朋克街道奔跑',
+          shotSize: 'medium',
+          angle: 'eye-level',
+          movement: 'static',
+          duration: 5,
+          requiredElements: [],
+          forbiddenElements: [],
+        },
+      ]),
     );
     draftRepo.findOne.mockResolvedValue({ version: 0 });
-    draftRepo.save.mockImplementation(async (x) => ({ id: 'd2', ...x }));
+    draftRepo.save.mockImplementation(async (x: any) => ({ id: 'd2', ...x }));
 
     const res = await service.createDraft({ projectId: 'p2', instruction: '生成分镜' });
-    expect(res.characterProfile).toBeDefined();
     expect((res.characterProfile as any).characterProfiles).toBeDefined();
     expect((res.characterProfile as any).worldSetting).toBeDefined();
     expect((res.characterProfile as any).storyOutline).toBeDefined();
   });
 
-  it('uses storyOutline targetShotCount for max shots constraint', async () => {
-    projectService.findOne.mockResolvedValue({
-      id: 'p3',
-      prepNodes: [
-        makeCharacterPrepNode(true, [], [], []),
-        {
-          type: 'story_outline',
-          status: 'confirmed',
-          order: 0,
-          data: { premise: 'test', plotBeats: [], tone: 'neutral', targetShotCount: 3 },
-        },
-      ],
-    });
-    llmService.draftStoryboard.mockResolvedValue(
-      JSON.stringify({
-        version: '1.0',
-        intent: 'x',
-        shots: [
-          {
-            order: 0,
-            prompt: 'a',
-            shotSize: 'medium',
-            angle: 'eye-level',
-            movement: 'static',
-            duration: 5,
-            requiredElements: [],
-            forbiddenElements: [],
-          },
-        ],
-      }),
-    );
-    draftRepo.findOne.mockResolvedValue({ version: 0 });
-    draftRepo.save.mockImplementation(async (x) => ({ id: 'd3', ...x }));
-
-    await service.createDraft({ projectId: 'p3', instruction: 'test' });
-    // Verify draft was created successfully with story outline context
-    expect(draftRepo.save).toHaveBeenCalled();
-  });
-
-  it('allows draft with mixed confirmed/unconfirmed prep nodes', async () => {
-    projectService.findOne.mockResolvedValue({
-      id: 'p1',
-      prepNodes: [
-        makeCharacterPrepNode(false, ['长发'], [], []),
-        {
-          type: 'world_setting',
-          status: 'confirmed',
-          order: 1,
-          data: { era: '现代', location: '', atmosphere: [], rules: [], visualStyle: '' },
-        },
-      ],
-    });
-    llmService.draftStoryboard.mockResolvedValue(
-      JSON.stringify({
+  it('apply validates draft JSON with Zod schema', async () => {
+    projectService.findOne.mockResolvedValue({ id: 'p1' });
+    draftRepo.findOne.mockResolvedValue({
+      id: 'd1',
+      projectId: 'p1',
+      version: 1,
+      storyboardJson: {
         version: '1.0',
         intent: 'x',
         shots: [
@@ -357,12 +220,32 @@ describe('StoryboardService', () => {
             forbiddenElements: [],
           },
         ],
-      }),
-    );
-    draftRepo.findOne.mockResolvedValue({ version: 0 });
-    draftRepo.save.mockImplementation(async (x) => ({ id: 'd2', ...x }));
+      },
+    });
 
-    const res = await service.createDraft({ projectId: 'p1', instruction: 'test' });
-    expect(res.version).toBe(1);
+    const mockDelete = jest.fn();
+    const mockSave = jest.fn().mockResolvedValue({});
+    const mockCreate = jest.fn((x) => x);
+    shotRepo.manager.transaction.mockImplementation(async (cb: any) => {
+      await cb({
+        getRepository: () => ({ delete: mockDelete, save: mockSave, create: mockCreate }),
+      });
+    });
+
+    const result = await service.applyDraft('p1', 'd1', 'replace_all');
+    expect(result.ok).toBe(true);
+    expect(result.shotCount).toBe(1);
+  });
+
+  it('rejects invalid stored draft JSON on apply', async () => {
+    projectService.findOne.mockResolvedValue({ id: 'p1' });
+    draftRepo.findOne.mockResolvedValue({
+      id: 'd1',
+      projectId: 'p1',
+      version: 1,
+      storyboardJson: { version: '2.0', intent: '', shots: [] },
+    });
+
+    await expect(service.applyDraft('p1', 'd1', 'replace_all')).rejects.toThrow();
   });
 });

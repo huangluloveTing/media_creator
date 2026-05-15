@@ -1,162 +1,73 @@
-import { BadRequestException, HttpException, HttpStatus } from '@nestjs/common';
-import type { ShotAngle, ShotMovement, ShotSize } from '@media-creator/shared';
+import { z } from 'zod';
 
-export interface StoryboardShot {
-  order: number;
-  prompt: string;
-  shotSize: ShotSize;
-  angle: ShotAngle;
-  movement: ShotMovement;
-  duration: number;
-  requiredElements: string[];
-  forbiddenElements: string[];
-}
+// ── Storyboard Shot ──
+const SHOT_SIZES = ['extreme-wide', 'wide', 'medium', 'close-up', 'extreme-close-up'] as const;
+const ANGLES = ['eye-level', 'low', 'high', 'dutch', 'aerial'] as const;
+const MOVEMENTS = ['static', 'pan', 'tilt', 'dolly', 'zoom', 'handheld'] as const;
 
-export interface StoryboardPayload {
-  version: '1.0';
-  intent: string;
-  shots: StoryboardShot[];
-}
+export const storyboardShotSchema = z.object({
+  order: z.number().int().min(0),
+  prompt: z.string().min(1),
+  shotSize: z.enum(SHOT_SIZES),
+  angle: z.enum(ANGLES),
+  movement: z.enum(MOVEMENTS),
+  duration: z.number().int().min(1).max(12),
+  requiredElements: z.array(z.string()),
+  forbiddenElements: z.array(z.string()),
+}).passthrough();
 
-const SHOT_SIZES = new Set<ShotSize>([
-  'extreme-wide',
-  'wide',
-  'medium',
-  'close-up',
-  'extreme-close-up',
-]);
-const ANGLES = new Set<ShotAngle>(['eye-level', 'low', 'high', 'dutch', 'aerial']);
-const MOVEMENTS = new Set<ShotMovement>(['static', 'pan', 'tilt', 'dolly', 'zoom', 'handheld']);
+export const storyboardSchema = z.object({
+  version: z.coerce.string().default('1.0'),
+  intent: z.string().min(1),
+  shots: z.array(storyboardShotSchema).min(1).max(5),
+}).passthrough();
 
-function isObject(v: unknown): v is Record<string, unknown> {
-  return typeof v === 'object' && v !== null && !Array.isArray(v);
-}
+export type StoryboardShot = z.infer<typeof storyboardShotSchema>;
+export type StoryboardPayload = z.infer<typeof storyboardSchema>;
 
-export function parseJsonResponse(content: string): unknown {
-  // 1. Direct JSON parse
-  try {
-    return JSON.parse(content);
-  } catch {
-    // continue
+// ── Prep Data ──
+export const characterProfileSchema = z.object({
+  name: z.string().default(''),
+  appearance: z.array(z.string()).default([]),
+  outfit: z.array(z.string()).default([]),
+  traits: z.array(z.string()).default([]),
+  immutable: z.array(z.string()).default([]),
+});
+
+export const characterDataSchema = z.object({
+  characters: z.array(characterProfileSchema).default([]),
+});
+
+export const worldSettingDataSchema = z.object({
+  era: z.string().default(''),
+  location: z.string().default(''),
+  atmosphere: z.array(z.string()).default([]),
+  rules: z.array(z.string()).default([]),
+  visualStyle: z.string().default(''),
+});
+
+export const storyOutlineDataSchema = z.object({
+  premise: z.string().default(''),
+  plotBeats: z.array(z.string()).default([]),
+  tone: z.string().default(''),
+  targetShotCount: z.number().int().min(1).max(10).default(5),
+});
+
+export type CharacterProfile = z.infer<typeof characterProfileSchema>;
+export type CharacterData = z.infer<typeof characterDataSchema>;
+export type WorldSettingData = z.infer<typeof worldSettingDataSchema>;
+export type StoryOutlineData = z.infer<typeof storyOutlineDataSchema>;
+
+// ── Prep schema lookup ──
+export function getPrepSchema(prepType: string) {
+  switch (prepType) {
+    case 'character':
+      return characterDataSchema;
+    case 'world_setting':
+      return worldSettingDataSchema;
+    case 'story_outline':
+      return storyOutlineDataSchema;
+    default:
+      return characterDataSchema;
   }
-
-  // 2. Extract from ```json ... ``` block
-  const fenced = content.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (fenced) {
-    try {
-      return JSON.parse(fenced[1].trim());
-    } catch {
-      // continue
-    }
-  }
-
-  // 3. Find first { or [ and try to parse from there
-  const braceStart = content.indexOf('{');
-  const bracketStart = content.indexOf('[');
-  const start =
-    braceStart >= 0 && bracketStart >= 0
-      ? Math.min(braceStart, bracketStart)
-      : Math.max(braceStart, bracketStart);
-  if (start >= 0) {
-    try {
-      return JSON.parse(content.slice(start));
-    } catch {
-      // continue
-    }
-  }
-
-  throw new HttpException('INVALID_LLM_FORMAT', HttpStatus.UNPROCESSABLE_ENTITY);
-}
-
-export function validateStoryboardPayload(input: unknown): StoryboardPayload {
-  if (!isObject(input)) {
-    throw new HttpException('INVALID_STORYBOARD_SCHEMA', HttpStatus.UNPROCESSABLE_ENTITY);
-  }
-
-  const allowedKeys = new Set(['version', 'intent', 'shots']);
-  for (const key of Object.keys(input)) {
-    if (!allowedKeys.has(key)) {
-      throw new HttpException('INVALID_STORYBOARD_SCHEMA', HttpStatus.UNPROCESSABLE_ENTITY);
-    }
-  }
-
-  if (input.version !== '1.0' || typeof input.intent !== 'string' || !input.intent.trim()) {
-    throw new HttpException('INVALID_STORYBOARD_SCHEMA', HttpStatus.UNPROCESSABLE_ENTITY);
-  }
-
-  if (!Array.isArray(input.shots) || input.shots.length < 1 || input.shots.length > 5) {
-    throw new HttpException('CONSTRAINT_VIOLATION', HttpStatus.UNPROCESSABLE_ENTITY);
-  }
-
-  const shots: StoryboardShot[] = input.shots.map((raw, idx) => {
-    if (!isObject(raw)) {
-      throw new HttpException('INVALID_STORYBOARD_SCHEMA', HttpStatus.UNPROCESSABLE_ENTITY);
-    }
-
-    const shotAllowedKeys = new Set([
-      'order',
-      'prompt',
-      'shotSize',
-      'angle',
-      'movement',
-      'duration',
-      'requiredElements',
-      'forbiddenElements',
-    ]);
-    for (const key of Object.keys(raw)) {
-      if (!shotAllowedKeys.has(key)) {
-        throw new HttpException('INVALID_STORYBOARD_SCHEMA', HttpStatus.UNPROCESSABLE_ENTITY);
-      }
-    }
-
-    if (raw.order !== idx)
-      throw new HttpException('CONSTRAINT_VIOLATION', HttpStatus.UNPROCESSABLE_ENTITY);
-    if (typeof raw.prompt !== 'string' || !raw.prompt.trim()) {
-      throw new HttpException('CONSTRAINT_VIOLATION', HttpStatus.UNPROCESSABLE_ENTITY);
-    }
-    if (!SHOT_SIZES.has(raw.shotSize as ShotSize)) {
-      throw new HttpException('INVALID_STORYBOARD_SCHEMA', HttpStatus.UNPROCESSABLE_ENTITY);
-    }
-    if (!ANGLES.has(raw.angle as ShotAngle)) {
-      throw new HttpException('INVALID_STORYBOARD_SCHEMA', HttpStatus.UNPROCESSABLE_ENTITY);
-    }
-    if (!MOVEMENTS.has(raw.movement as ShotMovement)) {
-      throw new HttpException('INVALID_STORYBOARD_SCHEMA', HttpStatus.UNPROCESSABLE_ENTITY);
-    }
-    if (typeof raw.duration !== 'number' || raw.duration < 1 || raw.duration > 12) {
-      throw new HttpException('CONSTRAINT_VIOLATION', HttpStatus.UNPROCESSABLE_ENTITY);
-    }
-    if (
-      !Array.isArray(raw.requiredElements) ||
-      !raw.requiredElements.every((v) => typeof v === 'string')
-    ) {
-      throw new HttpException('INVALID_STORYBOARD_SCHEMA', HttpStatus.UNPROCESSABLE_ENTITY);
-    }
-    if (
-      !Array.isArray(raw.forbiddenElements) ||
-      !raw.forbiddenElements.every((v) => typeof v === 'string')
-    ) {
-      throw new HttpException('INVALID_STORYBOARD_SCHEMA', HttpStatus.UNPROCESSABLE_ENTITY);
-    }
-
-    return {
-      order: raw.order,
-      prompt: raw.prompt,
-      shotSize: raw.shotSize as ShotSize,
-      angle: raw.angle as ShotAngle,
-      movement: raw.movement as ShotMovement,
-      duration: raw.duration,
-      requiredElements: raw.requiredElements,
-      forbiddenElements: raw.forbiddenElements,
-    };
-  });
-
-  return { version: '1.0', intent: input.intent, shots };
-}
-
-export function ensureInstruction(instruction?: string): string {
-  if (!instruction || !instruction.trim()) {
-    throw new BadRequestException('instruction is required');
-  }
-  return instruction.trim();
 }

@@ -13,5 +13,10 @@
   },
   "devDependencies": {
     "prettier": "^3.8.3"
+  },
+  "dependencies": {
+    "@ai-sdk/openai": "^3.0.63",
+    "ai": "^6.0.182",
+    "zod": "^4.4.3"
   }
 }

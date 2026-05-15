@@ -1,17 +1,21 @@
-import { HttpException } from '@nestjs/common';
-import { parseJsonResponse, validateStoryboardPayload } from '../storyboard.schema';
+import {
+  storyboardSchema,
+  characterDataSchema,
+  worldSettingDataSchema,
+  storyOutlineDataSchema,
+} from '../storyboard.schema';
 
-describe('storyboard schema', () => {
+describe('Zod storyboard schema', () => {
   const valid = {
-    version: '1.0',
+    version: '1.0' as const,
     intent: 'test',
     shots: [
       {
         order: 0,
         prompt: 'a',
-        shotSize: 'medium',
-        angle: 'eye-level',
-        movement: 'static',
+        shotSize: 'medium' as const,
+        angle: 'eye-level' as const,
+        movement: 'static' as const,
         duration: 3,
         requiredElements: [],
         forbiddenElements: [],
@@ -20,12 +24,14 @@ describe('storyboard schema', () => {
   };
 
   it('accepts valid payload', () => {
-    const result = validateStoryboardPayload(valid);
-    expect(result.shots).toHaveLength(1);
+    const result = storyboardSchema.safeParse(valid);
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.shots).toHaveLength(1);
   });
 
-  it('rejects non json parse', () => {
-    expect(() => parseJsonResponse('{bad')).toThrow(HttpException);
+  it('rejects invalid JSON (not object)', () => {
+    const result = storyboardSchema.safeParse('bad');
+    expect(result.success).toBe(false);
   });
 
   it('rejects too many shots', () => {
@@ -33,14 +39,63 @@ describe('storyboard schema', () => {
       ...valid,
       shots: Array.from({ length: 6 }, (_, i) => ({ ...valid.shots[0], order: i })),
     };
-    expect(() => validateStoryboardPayload(payload)).toThrow(HttpException);
+    const result = storyboardSchema.safeParse(payload);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues.some((i) => i.path.includes('shots'))).toBe(true);
+    }
   });
 
   it('rejects invalid duration', () => {
-    const payload = {
-      ...valid,
-      shots: [{ ...valid.shots[0], duration: 13 }],
-    };
-    expect(() => validateStoryboardPayload(payload)).toThrow(HttpException);
+    const payload = { ...valid, shots: [{ ...valid.shots[0], duration: 13 }] };
+    const result = storyboardSchema.safeParse(payload);
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects invalid shot size', () => {
+    const payload = { ...valid, shots: [{ ...valid.shots[0], shotSize: 'macro' }] };
+    const result = storyboardSchema.safeParse(payload);
+    expect(result.success).toBe(false);
+  });
+
+  it('returns field-level error for multiple issues', () => {
+    const payload = { ...valid, shots: [{ ...valid.shots[0], duration: 99, prompt: '' }] };
+    const result = storyboardSchema.safeParse(payload);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues.length).toBeGreaterThanOrEqual(2);
+    }
+  });
+});
+
+describe('Zod prep schemas', () => {
+  it('characterDataSchema accepts valid multi-character data', () => {
+    const result = characterDataSchema.safeParse({
+      characters: [
+        { name: '主', appearance: ['长发'], outfit: ['校服'], traits: ['坚韧'], immutable: [] },
+      ],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('characterDataSchema applies defaults for missing fields', () => {
+    const result = characterDataSchema.safeParse({ characters: [{}] });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.characters[0].appearance).toEqual([]);
+      expect(result.data.characters[0].name).toBe('');
+    }
+  });
+
+  it('worldSettingDataSchema applies defaults', () => {
+    const result = worldSettingDataSchema.safeParse({});
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.era).toBe('');
+  });
+
+  it('storyOutlineDataSchema applies defaults', () => {
+    const result = storyOutlineDataSchema.safeParse({});
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.targetShotCount).toBe(5);
   });
 });

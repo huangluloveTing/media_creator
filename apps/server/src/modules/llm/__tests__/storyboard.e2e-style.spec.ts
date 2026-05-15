@@ -81,24 +81,22 @@ describe('Storyboard e2e-style flow', () => {
   });
 
   it('keeps character consistency across multi-round drafts and preserves user intent direction', async () => {
-    llmService.draftStoryboard.mockResolvedValueOnce(
-      JSON.stringify({
-        version: '1.0',
-        intent: '女主雨夜追逐，紧张感',
-        shots: [
-          {
-            order: 0,
-            prompt: '雨夜街头，长发女主身穿校服回头张望，紧张呼吸。',
-            shotSize: 'medium',
-            angle: 'eye-level',
-            movement: 'handheld',
-            duration: 5,
-            requiredElements: ['长发女主', '校服', '雨夜'],
-            forbiddenElements: [],
-          },
-        ],
-      }),
-    );
+    llmService.draftStoryboard.mockResolvedValueOnce({
+      version: '1.0' as const,
+      intent: '女主雨夜追逐，紧张感',
+      shots: [
+        {
+          order: 0,
+          prompt: '雨夜街头，长发女主身穿校服回头张望，紧张呼吸。',
+          shotSize: 'medium' as const,
+          angle: 'eye-level' as const,
+          movement: 'handheld' as const,
+          duration: 5,
+          requiredElements: ['长发女主', '校服', '雨夜'],
+          forbiddenElements: [],
+        },
+      ],
+    });
 
     const r1 = await service.createDraft({
       projectId: 'p1',
@@ -106,24 +104,22 @@ describe('Storyboard e2e-style flow', () => {
       mode: 'fast',
     });
 
-    llmService.draftStoryboard.mockResolvedValueOnce(
-      JSON.stringify({
-        version: '1.0',
-        intent: '保持同一女主，增加动作冲突',
-        shots: [
-          {
-            order: 0,
-            prompt: '同一长发校服女主冲入小巷，手持镜头快速跟进。',
-            shotSize: 'wide',
-            angle: 'low',
-            movement: 'handheld',
-            duration: 4,
-            requiredElements: ['长发女主', '校服'],
-            forbiddenElements: ['短发'],
-          },
-        ],
-      }),
-    );
+    llmService.draftStoryboard.mockResolvedValueOnce({
+      version: '1.0' as const,
+      intent: '保持同一女主，增加动作冲突',
+      shots: [
+        {
+          order: 0,
+          prompt: '同一长发校服女主冲入小巷，手持镜头快速跟进。',
+          shotSize: 'wide' as const,
+          angle: 'low' as const,
+          movement: 'handheld' as const,
+          duration: 4,
+          requiredElements: ['长发女主', '校服'],
+          forbiddenElements: ['短发'],
+        },
+      ],
+    });
 
     const r2 = await service.createDraft({
       projectId: 'p1',

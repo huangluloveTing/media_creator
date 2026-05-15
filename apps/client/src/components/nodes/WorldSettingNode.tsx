@@ -14,7 +14,7 @@ function WorldSettingNode({ data, selected }: NodeProps) {
         borderRadius: 12,
         border: `2px solid ${confirmed ? '#16a34a' : '#f59e0b'}`,
         background: '#131330',
-        minWidth: 220,
+        width: 260,
         boxShadow: selected
           ? '0 0 0 2px rgba(79,124,255,.45), 0 4px 16px rgba(0,0,0,.25)'
           : '0 2px 10px rgba(0,0,0,.2)',

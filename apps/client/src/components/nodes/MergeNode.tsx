@@ -10,7 +10,7 @@ function MergeNode({ data, selected }: NodeProps) {
         borderRadius: 12,
         border: '2px solid #4c1d95',
         background: 'rgba(168, 85, 247, 0.08)',
-        minWidth: 160,
+        width: 200,
         boxShadow: selected
           ? '0 0 0 2px rgba(168, 85, 247, 0.5), 0 4px 20px rgba(0,0,0,0.3)'
           : '0 2px 10px rgba(0,0,0,0.2)',
