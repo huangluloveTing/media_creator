@@ -241,16 +241,18 @@ ${prompt}`;
       schema: {
         version: '1.0',
         intent: 'string',
-        shots: [{
-          order: 0,
-          prompt: 'string',
-          shotSize: 'extreme-wide|wide|medium|close-up|extreme-close-up',
-          angle: 'eye-level|low|high|dutch|aerial',
-          movement: 'static|pan|tilt|dolly|zoom|handheld',
-          duration: 5,
-          requiredElements: ['string'],
-          forbiddenElements: ['string'],
-        }],
+        shots: [
+          {
+            order: 0,
+            prompt: 'string',
+            shotSize: 'extreme-wide|wide|medium|close-up|extreme-close-up',
+            angle: 'eye-level|low|high|dutch|aerial',
+            movement: 'static|pan|tilt|dolly|zoom|handheld',
+            duration: 5,
+            requiredElements: ['string'],
+            forbiddenElements: ['string'],
+          },
+        ],
       },
     });
 
@@ -277,7 +279,8 @@ ${prompt}`;
       }
 
       const rawParsed = extractPrepJson(fullText.trim());
-      if (!rawParsed) throw new HttpException('INVALID_LLM_FORMAT', HttpStatus.UNPROCESSABLE_ENTITY);
+      if (!rawParsed)
+        throw new HttpException('INVALID_LLM_FORMAT', HttpStatus.UNPROCESSABLE_ENTITY);
 
       // Unwrap common LLM wrapper patterns: { storyboard: {...} }, { result: {...} }
       let parsed: unknown = rawParsed;

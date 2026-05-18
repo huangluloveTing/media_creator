@@ -5,22 +5,26 @@ const SHOT_SIZES = ['extreme-wide', 'wide', 'medium', 'close-up', 'extreme-close
 const ANGLES = ['eye-level', 'low', 'high', 'dutch', 'aerial'] as const;
 const MOVEMENTS = ['static', 'pan', 'tilt', 'dolly', 'zoom', 'handheld'] as const;
 
-export const storyboardShotSchema = z.object({
-  order: z.number().int().min(0),
-  prompt: z.string().min(1),
-  shotSize: z.enum(SHOT_SIZES),
-  angle: z.enum(ANGLES),
-  movement: z.enum(MOVEMENTS),
-  duration: z.number().int().min(1).max(12),
-  requiredElements: z.array(z.string()),
-  forbiddenElements: z.array(z.string()),
-}).passthrough();
+export const storyboardShotSchema = z
+  .object({
+    order: z.number().int().min(0),
+    prompt: z.string().min(1),
+    shotSize: z.enum(SHOT_SIZES),
+    angle: z.enum(ANGLES),
+    movement: z.enum(MOVEMENTS),
+    duration: z.number().int().min(1).max(12),
+    requiredElements: z.array(z.string()),
+    forbiddenElements: z.array(z.string()),
+  })
+  .passthrough();
 
-export const storyboardSchema = z.object({
-  version: z.coerce.string().default('1.0'),
-  intent: z.string().min(1),
-  shots: z.array(storyboardShotSchema).min(1).max(5),
-}).passthrough();
+export const storyboardSchema = z
+  .object({
+    version: z.coerce.string().default('1.0'),
+    intent: z.string().min(1),
+    shots: z.array(storyboardShotSchema).min(1).max(5),
+  })
+  .passthrough();
 
 export type StoryboardShot = z.infer<typeof storyboardShotSchema>;
 export type StoryboardPayload = z.infer<typeof storyboardSchema>;
